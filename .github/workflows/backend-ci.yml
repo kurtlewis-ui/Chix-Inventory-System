@@ -1,0 +1,57 @@
+name: Backend CI
+
+# Runs on every pull request that touches the backend (and on pushes to main).
+# GitHub's runners have internet, so they can install deps + generate the
+# Prisma client + compile the NestJS app — the build check the sandbox can't
+# do. A red check means "don't merge until this is fixed".
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+# Cancel superseded runs on the same branch to save CI minutes.
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Prisma generate + Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      # Install dependencies (dev deps included so the Nest + Prisma CLIs are
+      # available). Uses npm install to tolerate lockfile drift when a new
+      # dependency is added in the same PR — matching how Render deploys.
+      - name: Install dependencies
+        run: npm install --include=dev --no-audit --no-fund
+
+      # Generate the Prisma client so `nest build` can type-check against it.
+      # Does NOT touch any database — generation is offline/codegen only.
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      # Compile the NestJS app — the real gate. Type errors, bad imports, or
+      # invalid Prisma queries fail here and turn the PR check red.
+      - name: Build
+        run: npm run build

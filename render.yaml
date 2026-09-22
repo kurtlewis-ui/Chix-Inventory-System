@@ -1,0 +1,71 @@
+# Render Blueprint for the Vape Shop backend (NestJS API).
+#
+# How to use:
+#   1. Push this file to your repo's main branch.
+#   2. On https://render.com, click "New +" -> "Blueprint" and pick this repo.
+#   3. Render reads this file and creates the web service below.
+#   4. Fill in the two values marked "sync: false" (DATABASE_URL and CORS_ORIGIN)
+#      when prompted. JWT secrets are generated automatically.
+#
+# Notes:
+#   - Free plan: the service sleeps after ~15 min of inactivity and cold-starts
+#     on the next request (first hit takes ~30-50s). Upgrade the plan for
+#     always-on with no cold starts.
+#   - "--include=dev" is required so the NestJS CLI and Prisma CLI (devDependencies)
+#     are available during the build.
+
+services:
+  - type: web
+    name: vape-shop-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install --include=dev && npx prisma generate && npm run build
+    # Just boot the app. Migrations AND seeding now run INSIDE the app on
+    # startup (see backend/src/run-migrations.ts), resiliently: the migration
+    # advisory lock is disabled and a cold/suspended DB is retried with
+    # backoff, so the "P1002 ... timed out acquiring a postgres advisory lock"
+    # cold-start failure can't abort the deploy anymore. Because there's no
+    # "&& migrate && seed" chain here, a transient DB hiccup can't half-fail
+    # the start command.
+    #
+    # DATABASE URLS (Supabase, Singapore region ap-southeast-1 to match this
+    # service's region — co-locating them keeps DB round-trips ~15ms instead of
+    # the ~400ms seen when the DB was in another region):
+    #   DATABASE_URL         -> transaction pooler, port 6543, ?pgbouncer=true
+    #   MIGRATE_DATABASE_URL -> session pooler,     port 5432 (needed for migrations)
+    startCommand: node dist/main.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Supabase transaction pooler (port 6543, ?pgbouncer=true), Singapore
+      # region (ap-southeast-1) to match this service. Paste when prompted.
+      - key: DATABASE_URL
+        sync: false
+      # Supabase session pooler (port 5432) — used ONLY for boot migrations,
+      # which the transaction pooler can't run. Same Singapore project.
+      - key: MIGRATE_DATABASE_URL
+        sync: false
+      # Set this to your deployed frontend URL, e.g. https://your-app.vercel.app
+      - key: CORS_ORIGIN
+        sync: false
+      # Strong secrets are generated automatically by Render.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION
+        value: 7d
+      - key: JWT_REFRESH_EXPIRATION
+        value: 7d
+      - key: BCRYPT_ROUNDS
+        value: "12"
+      - key: SESSION_TIMEOUT
+        value: "900"
+      - key: RATE_LIMIT_TTL
+        value: "60"
+      - key: RATE_LIMIT_MAX
+        value: "100"
+      - key: API_PREFIX
+        value: api/v1

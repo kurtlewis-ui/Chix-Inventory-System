@@ -1,0 +1,780 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-page-bg text-text-primary antialiased font-sans;
+  background-image:
+    radial-gradient(900px circle at 50% -15%, rgba(255, 255, 255, 0.02), transparent 45%);
+  background-attachment: fixed;
+}
+
+/* ----------------------------------------------------------------------
+   DARK THEME tokens (default). Previously dark mode relied only on the
+   Tailwind fallback values, where card-border was a solid #2a2a2a — a hard,
+   bright line that's harsh on the eye across all the data tables. Define the
+   dark tokens here so the border/divider is a SOFT translucent-white hairline
+   instead: it still defines edges, but doesn't glare. `.content-light` below
+   overrides these for light mode. Only the border tokens are set here; other
+   surfaces keep their existing Tailwind fallbacks.
+   ---------------------------------------------------------------------- */
+:root {
+  /* Soft hairline for card edges and table row dividers (was #2a2a2a). */
+  --content-card-border: rgba(255, 255, 255, 0.08);
+  /* A slightly more visible variant for input fields, which need to read as
+     defined controls. */
+  --content-input-border: rgba(255, 255, 255, 0.14);
+}
+
+/* ----------------------------------------------------------------------
+   Content area theme — CSS variable overrides.
+   Default (dark): white buttons, white glows, monochrome charts
+   Light: black buttons, dark glows, colorful charts
+   ---------------------------------------------------------------------- */
+.content-light {
+  /* ---- Anti-glare NEUTRAL canvas ----------------------------------------
+     The base layer is a soft neutral gray (not pure white, no cool/blue tint)
+     so the page never glares. Crisp #FFFFFF is reserved for data surfaces
+     (cards, tables, metrics) below, which separate cleanly by being LIGHTER
+     than this neutral ground — so panels stay distinct and easy to read while
+     borders can stay soft. Calm and blended, but never flat enough to melt. */
+  --content-page-bg: #f2f2f1;          /* soft neutral gray — the anti-glare canvas */
+  --content-card-bg: #ffffff;          /* crisp white RESERVED for data cards/tables */
+  /* Neutral gray borders (no blue tint). Cards mainly separate by being lighter
+     (white) than the neutral canvas, so the border only defines the edge softly
+     — it doesn't carry the whole separation. */
+  --content-card-border: rgba(30, 30, 28, 0.12);
+  --content-table-header: #ececea;     /* neutral, sits a step below the white card */
+  --content-table-header-text: #4a4a46;
+  /* Deep neutral charcoal for maximum legibility of key data (SKU, totals). */
+  --content-text-primary: #1e1e1c;
+  --content-text-secondary: #52514d;
+  /* Muted metadata — tuned for ~4.6:1 contrast on the neutral canvas. */
+  --content-text-muted: #77766f;
+  --content-text-link: #45443f;
+  --content-surface-muted: #ececea;    /* soft neutral chip/hover surface */
+  /* Inputs sit a touch below the canvas with a defined hairline border so they
+     read clearly as fields both on the canvas AND inside white cards, without
+     a harsh outline. The focus ring confirms interactivity. */
+  --content-input-bg: #f2f2f1;
+  --content-input-border: rgba(30, 30, 28, 0.16);
+  --content-btn-primary: #000000;      /* brand accent kept as-is (black in light) */
+  --content-btn-primary-text: #ffffff;
+  --content-input-focus: #6f6e68;      /* neutral gray focus tone (no blue) */
+  --content-row-alt: rgba(30, 30, 28, 0.025);   /* barely-there zebra striping */
+  --content-row-hover: rgba(30, 30, 28, 0.05);
+  --content-secondary-btn-bg: rgba(30, 30, 28, 0.05);
+  /* ---- Desaturated status accents (LIGHT MODE ONLY) ----------------------
+     Soft, elegant versions of the status colors so "In Stock / Low / Out"
+     catch the eye without screaming. Dark mode keeps its vivid tokens. These
+     override the global accent-* tokens only within .content-light. Info/edit
+     uses a neutral-leaning blue so it no longer casts a cool tone. */
+  --content-accent-green: #3f7a54;     /* In Stock — subtle green */
+  --content-accent-orange: #b0790f;    /* Low Stock — soft amber */
+  --content-accent-red: #b4544e;       /* Out of Stock / errors — muted red */
+  --content-accent-blue: #4a6591;      /* info / edit — muted, low-chroma blue */
+  color-scheme: light;
+  /* A whisper of neutral light from the top so the canvas feels gently lit
+     rather than a flat fill. Extremely subtle — purely ambient, no color cast. */
+  background-image:
+    radial-gradient(1100px circle at 50% -12%, rgba(255, 255, 255, 0.75), transparent 42%);
+  background-attachment: fixed;
+}
+
+/* Apply the softened, light-mode-only status accents to the shared tokens the
+   badges/dots/action buttons use. Scoped to .content-light so dark mode is
+   untouched. */
+.content-light .text-accent-green { color: var(--content-accent-green) !important; }
+.content-light .text-accent-orange { color: var(--content-accent-orange) !important; }
+.content-light .text-accent-red { color: var(--content-accent-red) !important; }
+.content-light .text-accent-blue { color: var(--content-accent-blue) !important; }
+.content-light .bg-accent-green { background-color: var(--content-accent-green) !important; }
+.content-light .bg-accent-orange { background-color: var(--content-accent-orange) !important; }
+.content-light .bg-accent-red { background-color: var(--content-accent-red) !important; }
+
+/* Force all form elements in light mode to use the deep neutral text color */
+.content-light input,
+.content-light select,
+.content-light textarea,
+.content-light option {
+  color: #1e1e1c !important;
+}
+
+.content-light input::placeholder,
+.content-light textarea::placeholder {
+  color: #9a9992 !important;
+}
+
+.content-light select option {
+  background-color: #ffffff;
+  color: #1e1e1c;
+}
+
+/* Light mode cards get a soft, elegant two-layer lift so crisp-white data
+   surfaces float gently above the neutral canvas (premium emphasis, not a hard
+   drop shadow). Neutral warm-gray shadow to match the canvas — this is the
+   main way cards separate, so borders can stay soft and easy on the eyes. */
+.content-light .bg-card-bg {
+  box-shadow:
+    0 1px 2px rgba(30, 30, 28, 0.06),
+    0 6px 16px -6px rgba(30, 30, 28, 0.12);
+}
+
+/* ----------------------------------------------------------------------
+   Alternating table rows + hover (both themes)
+   ---------------------------------------------------------------------- */
+table tbody tr:nth-child(even) {
+  background-color: var(--content-row-alt, rgba(255, 255, 255, 0.02));
+}
+
+table tbody tr:hover {
+  background-color: var(--content-row-hover, rgba(255, 255, 255, 0.04)) !important;
+}
+
+/* Secondary/cancel buttons — visible in both themes. Sizing (padding/radius/
+   text), a focus ring, and the disabled state are baked in so every
+   .btn-secondary matches .btn-grad's shape without each call site re-declaring
+   them. */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;              /* px-4 py-2 — matches .btn-grad */
+  border-radius: 0.5rem;             /* rounded-lg */
+  font-size: 0.875rem;               /* text-sm */
+  line-height: 1.25rem;
+  font-weight: 500;
+  background-color: var(--content-secondary-btn-bg, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--content-input-border, #333333);
+  color: var(--content-text-primary, #f0f0f0);
+  transition: all 0.15s ease;
+}
+
+.btn-secondary:hover {
+  opacity: 0.8;
+}
+
+.btn-secondary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--content-input-focus, #ffffff) 30%, transparent);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Smooth transition when switching themes */
+.content-transition {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ----------------------------------------------------------------------
+   Gradient text accent — silver/chrome shimmer
+   ---------------------------------------------------------------------- */
+.text-gradient {
+  background-image: linear-gradient(120deg, #e0e0e0 0%, #888888 50%, #e0e0e0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Roomier NATIVE dropdowns everywhere (no custom component). Applies to every
+   <select> on the site — a ~15px font + comfortable min-height. Many desktop
+   browsers scale the OPEN option rows relative to the select's font size, so a
+   bigger font makes the open list feel less cramped too. */
+select {
+  font-size: 0.9375rem; /* 15px */
+  min-height: 44px;
+}
+
+/* Native dropdown (select) option list. The browser owns the open list, but
+   most desktop browsers DO honor padding/line-height on <option>, so we add
+   breathing room where allowed; it's harmless where ignored (Safari/mobile). */
+select option,
+select optgroup {
+  background-color: var(--content-input-bg, #1a1a1a);
+  color: var(--content-text-primary, #f0f0f0);
+  padding: 10px 14px;
+  line-height: 1.9;
+  min-height: 2.25rem;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--content-page-bg, #0f0f0f);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--content-input-border, #333333);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--content-text-muted, #4a4a4a);
+}
+
+/* ----------------------------------------------------------------------
+   Logo shimmer effect — white sweep from left to right on hover.
+   ---------------------------------------------------------------------- */
+.logo-shimmer {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.logo-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  transition: none;
+}
+
+.logo-shimmer:hover::after {
+  animation: shimmer 0.8s ease-in-out;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ----------------------------------------------------------------------
+   Theme toggle icon animation — smooth rotate + scale
+   ---------------------------------------------------------------------- */
+.theme-icon-enter {
+  animation: theme-icon-in 0.4s ease-out;
+}
+
+@keyframes theme-icon-in {
+  0% { transform: rotate(-90deg) scale(0.5); opacity: 0; }
+  100% { transform: rotate(0deg) scale(1); opacity: 1; }
+}
+
+/* ----------------------------------------------------------------------
+   Toast notification animation — slide up + fade in/out
+   ---------------------------------------------------------------------- */
+.toast-enter {
+  animation: toast-slide-in 0.3s ease-out forwards;
+}
+
+.toast-exit {
+  animation: toast-slide-out 0.2s ease-in forwards;
+}
+
+@keyframes toast-slide-in {
+  0% { transform: translateX(-50%) translateY(20px); opacity: 0; }
+  100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+@keyframes toast-slide-out {
+  0% { transform: translateX(-50%) translateY(0); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(20px); opacity: 0; }
+}
+
+/* Confirm clear animation */
+.confirm-enter {
+  animation: confirm-fade-in 0.2s ease-out forwards;
+}
+
+@keyframes confirm-fade-in {
+  0% { opacity: 0; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* ----------------------------------------------------------------------
+   Card hover lift — uses theme-aware glow
+   ---------------------------------------------------------------------- */
+.card-hover {
+  @apply transition-all duration-200;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.3);
+}
+
+/* ----------------------------------------------------------------------
+   Selectable product/brand tile — rises + slightly scales with a soft
+   shadow and a theme-aware glow on hover. Used on the staff pages.
+   ---------------------------------------------------------------------- */
+.tile-hover {
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.18s ease, border-color 0.18s ease;
+  will-change: transform;
+}
+
+.tile-hover:hover {
+  transform: translateY(-6px) scale(1.025);
+  box-shadow:
+    0 14px 30px -8px rgba(0, 0, 0, 0.45),
+    0 0 0 1px color-mix(in srgb, var(--content-input-focus, #ffffff) 22%, transparent),
+    0 0 18px -2px color-mix(in srgb, var(--content-input-focus, #ffffff) 28%, transparent);
+}
+
+.tile-hover:active {
+  transform: translateY(-2px) scale(1.01);
+}
+
+/* Out-of-stock tiles never lift — they aren't selectable. */
+.tile-disabled {
+  cursor: not-allowed;
+}
+
+.tile-disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* ======================================================================
+   DESIGN FOUNDATION (PR #55)
+   Reusable primitives for the "elite SaaS" polish. These are TOOLS only —
+   applying them to screens happens in later PRs. They are built entirely
+   from the EXISTING black-and-white tokens (var(--content-*)), so nothing
+   here recolors the app or changes the theme; it only adds depth, glass,
+   motion, and status-feedback helpers.
+   ====================================================================== */
+
+/* --- Spring / tactile motion -----------------------------------------
+   A single elastic bezier for hover / active / tap states so interactive
+   elements feel physical. Apply `.spring` to opt in. */
+.spring {
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    box-shadow 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    background-color 0.25s ease, border-color 0.25s ease, opacity 0.25s ease;
+}
+
+.spring:active {
+  transform: scale(0.97);
+}
+
+/* --- Restrained glassmorphism ----------------------------------------
+   For CHROME only (top-bar/header, sidebars, slide-over panels, dropdowns
+   and context menus) — never for solid data cards. Uses a translucent tint
+   of the theme's own card background plus a hairline border, so it stays
+   monochrome and on-brand in both dark and light.
+
+   Legibility first: these are kept MOSTLY SOLID with only a gentle blur, so
+   content behind never muddies the text on top. Heavy see-through glass was
+   causing eye strain (esp. on data-dense pages), so blur/translucency here is
+   deliberately restrained.
+
+   .glass        — nearly-solid surface for modals/dialogs (forms + data you
+                   read), with a whisper of blur for depth.
+   .glass-strong — for true floating chrome only (sidebars, slide-over panel);
+                   a touch more translucent since it overlays scrolling content. */
+.glass {
+  background-color: color-mix(in srgb, var(--content-card-bg, #1a1a1a) 92%, transparent);
+  backdrop-filter: blur(6px) saturate(110%);
+  -webkit-backdrop-filter: blur(6px) saturate(110%);
+  border: 1px solid color-mix(in srgb, var(--content-card-border, #2a2a2a) 80%, transparent);
+}
+
+.glass-strong {
+  background-color: color-mix(in srgb, var(--content-card-bg, #1a1a1a) 88%, transparent);
+  backdrop-filter: blur(10px) saturate(115%);
+  -webkit-backdrop-filter: blur(10px) saturate(115%);
+  border: 1px solid color-mix(in srgb, var(--content-card-border, #2a2a2a) 80%, transparent);
+}
+
+/* Graceful fallback: if a browser can't do backdrop-filter, fall back to a
+   near-opaque solid so text stays readable. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass,
+  .glass-strong {
+    background-color: color-mix(in srgb, var(--content-card-bg, #1a1a1a) 96%, transparent);
+  }
+}
+
+/* --- Glass select (dropdown pickers) ---------------------------------
+   Premium translucent look for the CLOSED <select> box (the part we can
+   style). Built from existing input tokens so it stays black-and-white in
+   both themes. NOTE: the browser draws the OPEN option list natively, so
+   that part can't be glassified — this only affects the closed control.
+   Pair with a chevron via the caller's markup or the arrow below. */
+.glass-select {
+  /* Nearly solid so the selected value stays crisp over busy pages — just a
+     hint of blur/sheen, not a see-through panel. */
+  background-color: color-mix(in srgb, var(--content-input-bg, #1a1a1a) 92%, transparent);
+  backdrop-filter: blur(4px) saturate(110%);
+  -webkit-backdrop-filter: blur(4px) saturate(110%);
+  border: 1px solid color-mix(in srgb, var(--content-input-border, #333333) 85%, transparent);
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  /* Sizing (min-height 44px + 15px font) comes from the global `select` rule,
+     so it stays consistent with non-glass selects too. */
+  line-height: 1.4;
+}
+
+.glass-select:hover {
+  border-color: color-mix(in srgb, var(--content-input-focus, #ffffff) 45%, transparent);
+}
+
+.glass-select:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--content-input-focus, #ffffff) 65%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--content-input-focus, #ffffff) 18%, transparent);
+}
+
+/* Clean icon action buttons (table rows). A consistent ~36px tap target with
+   a subtle colored hover tint (no heavy filled backgrounds), so action
+   columns read calm and uniform. Color via a modifier class. */
+.act-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  width: 30px;
+  border-radius: 0.5rem;
+  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+.act-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Groups the per-row action icons into one compact, tidy cluster so the
+   Actions column reads as a single control instead of scattered buttons. */
+.act-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 0.625rem;
+  border: 1px solid var(--card-border, rgba(255, 255, 255, 0.08));
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.act-approve { color: var(--content-text-secondary, #b0b0b0); }
+.act-approve:hover:not(:disabled) { color: #10b981; background-color: rgba(16, 185, 129, 0.12); }
+
+.act-decline { color: var(--content-text-secondary, #b0b0b0); }
+.act-decline:hover:not(:disabled) { color: #f59e0b; background-color: rgba(245, 158, 11, 0.12); }
+
+.act-edit { color: var(--content-text-secondary, #b0b0b0); }
+.act-edit:hover:not(:disabled) { color: #60a5fa; background-color: rgba(96, 165, 250, 0.12); }
+
+.act-delete { color: var(--content-text-secondary, #b0b0b0); }
+.act-delete:hover:not(:disabled) { color: #ef4444; background-color: rgba(239, 68, 68, 0.12); }
+
+/* Custom dropdown (Select.tsx) open-list pop-in. Fade only (no transform) so
+   it never fights the upward-open translateY positioning set inline. */
+.dropdown-pop {
+  animation: dropdown-pop-kf 0.14s ease-out;
+}
+
+@keyframes dropdown-pop-kf {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropdown-pop { animation: none; }
+}
+
+/* Solid fallback where backdrop-filter isn't supported. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-select {
+    background-color: color-mix(in srgb, var(--content-input-bg, #1a1a1a) 92%, transparent);
+  }
+}
+
+/* The native option list can't be glassified, but we can at least keep it
+   themed and readable (already handled globally for select option). */
+
+/* --- Elevation / dimensional depth -----------------------------------
+   Soft, layered shadow so surfaces read as floating above the page rather
+   than flat. Neutral (black) shadow — no color. */
+.elevate {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28), 0 8px 24px -8px rgba(0, 0, 0, 0.45);
+}
+
+.elevate-lg {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 18px 40px -12px rgba(0, 0, 0, 0.55);
+}
+
+/* --- Alert glow + pulse ----------------------------------------------
+   Turns a status badge into a living anchor. Color comes from the badge's
+   own text/background utility (accent-red / accent-orange) via currentColor,
+   so it stays consistent with the existing status palette.
+
+   .glow-pulse — ambient pulsing glow (e.g. critical / low stock)
+   .glow       — static soft glow (no animation) */
+.glow {
+  box-shadow: 0 0 8px -1px currentColor;
+}
+
+.glow-pulse {
+  animation: badge-glow-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes badge-glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent); }
+  50% { box-shadow: 0 0 10px 1px color-mix(in srgb, currentColor 55%, transparent); }
+}
+
+/* Explicit-color variants for badges whose text is white (so the glow uses
+   the status accent, not the text color). Colors are the existing
+   accent-red / accent-orange — no new palette. */
+.glow-pulse-red {
+  animation: badge-glow-pulse-red 1.8s ease-in-out infinite;
+}
+
+.glow-pulse-orange {
+  animation: badge-glow-pulse-orange 2.2s ease-in-out infinite;
+}
+
+@keyframes badge-glow-pulse-red {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  50% { box-shadow: 0 0 10px 1px rgba(239, 68, 68, 0.6); }
+}
+
+@keyframes badge-glow-pulse-orange {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  50% { box-shadow: 0 0 9px 1px rgba(245, 158, 11, 0.55); }
+}
+
+/* --- Success flash ----------------------------------------------------
+   Brief, non-blocking green wash that fades out over ~800ms — for a row or
+   card after a successful update / live stock change. Uses the existing
+   accent-green. Add the class, then remove it (or remount) to replay. */
+.flash-success {
+  animation: flash-success-kf 0.8s ease-out;
+}
+
+@keyframes flash-success-kf {
+  0% { background-color: color-mix(in srgb, var(--content-page-bg) 100%, transparent); }
+  15% { background-color: color-mix(in srgb, #10b981 22%, transparent); }
+  100% { background-color: transparent; }
+}
+
+/* --- Bento grid ------------------------------------------------------
+   Asymmetrical metrics grid. `.bento-grid` is the container; children use
+   `.bento-2` / `.bento-3` to span more columns at md+ (they stay full-width
+   and stack on mobile). Consumed by the dashboard redesign PR. */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .bento-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .bento-2 { grid-column: span 2 / span 2; }
+  .bento-3 { grid-column: span 3 / span 3; }
+  .bento-4 { grid-column: span 4 / span 4; }
+}
+
+/* Honor reduced-motion for the foundation animations too. */
+@media (prefers-reduced-motion: reduce) {
+  .spring,
+  .glow-pulse,
+  .glow-pulse-red,
+  .glow-pulse-orange,
+  .flash-success {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   Accessibility — focus rings (theme-aware: white in dark, dark in light)
+   ---------------------------------------------------------------------- */
+@layer base {
+  a:focus-visible,
+  button:focus-visible,
+  [role='button']:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    @apply outline-none ring-2 ring-offset-2 ring-offset-page-bg;
+    --tw-ring-color: color-mix(in srgb, var(--content-input-focus, #ffffff) 30%, transparent);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   Reusable UI component classes
+   ---------------------------------------------------------------------- */
+@layer components {
+  /* Primary action button — white in dark mode, black in light mode.
+     Sizing (padding/radius/text), a keyboard focus ring, and the disabled
+     state are baked in here so every .btn-grad across the app is consistent
+     without each call site re-declaring them. Callers can still override with
+     their own utilities where genuinely needed. */
+  .btn-grad {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium bg-btn-primary text-btn-primary-text shadow-sm transition-all hover:opacity-90 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-input-focus focus-visible:ring-offset-1 focus-visible:ring-offset-transparent disabled:opacity-60 disabled:pointer-events-none;
+  }
+
+  .icon-btn {
+    @apply inline-flex items-center justify-center rounded-lg p-1.5 transition-colors;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  .badge-neutral {
+    @apply bg-surface-muted text-text-secondary border border-card-border;
+  }
+
+  .badge-dot {
+    @apply h-1.5 w-1.5 rounded-full;
+  }
+}
+
+
+/* ----------------------------------------------------------------------
+   Global toast stack (bottom-right corner) — used by components/Toast.tsx
+   Professional card with title + subtitle and an animated status icon.
+   ---------------------------------------------------------------------- */
+
+/* Card enter: spring pop-in (scale + slide-up + fade). */
+.toast-in {
+  animation: toast-in-kf 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Card exit: smooth fade + slide out to the right. */
+.toast-out {
+  animation: toast-out-kf 0.22s ease-in forwards;
+}
+
+@keyframes toast-in-kf {
+  0% { transform: translateY(-10px) scale(0.94); opacity: 0; }
+  60% { transform: translateY(0) scale(1.01); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes toast-out-kf {
+  0% { transform: translateX(0) scale(1); opacity: 1; }
+  100% { transform: translateX(16px) scale(0.98); opacity: 0; }
+}
+
+/* Auto-dismiss progress bar shrinking left→right. */
+.toast-progress {
+  transform-origin: left center;
+  animation: toast-progress-kf linear forwards;
+}
+
+@keyframes toast-progress-kf {
+  0% { transform: scaleX(1); }
+  100% { transform: scaleX(0); }
+}
+
+/* ----------------------------------------------------------------------
+   Animated status icon — 3 stages, shared by success (check) and error (X):
+   (1) a thin arc spins as a "processing" swirl,
+   (2) the full ring strokes itself closed,
+   (3) the check / X path draws, then the icon springs with a soft glow.
+   ---------------------------------------------------------------------- */
+
+/* Stage 1: spinning swirl arc (fades out as the ring takes over). */
+.toast-icon-swirl {
+  transform-origin: center;
+  animation: toast-swirl-spin 0.3s linear, toast-swirl-fade 0.1s ease-out 0.24s forwards;
+}
+
+@keyframes toast-swirl-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(320deg); }
+}
+
+@keyframes toast-swirl-fade {
+  to { opacity: 0; }
+}
+
+/* Stage 2: ring draws itself closed (circumference ~ 2*pi*10 ≈ 63). */
+.toast-icon-ring {
+  stroke-dasharray: 63;
+  stroke-dashoffset: 63;
+  animation: toast-ring-draw 0.26s ease-out 0.28s forwards;
+}
+
+@keyframes toast-ring-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Stage 3: check / X mark draws in (dash length covers both paths). */
+.toast-icon-mark {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: toast-mark-draw 0.2s ease-out 0.52s forwards;
+}
+
+@keyframes toast-mark-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Whole icon spring bounce + glow pulse once the mark lands. */
+.toast-icon-pop {
+  transform-origin: center;
+  animation: toast-icon-pop-kf 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) 0.54s both;
+}
+
+@keyframes toast-icon-pop-kf {
+  0% { transform: scale(0.8); }
+  55% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+.toast-icon-glow-success {
+  animation: toast-glow-success 0.45s ease-out 0.54s both;
+}
+
+.toast-icon-glow-error {
+  animation: toast-glow-error 0.45s ease-out 0.54s both;
+}
+
+@keyframes toast-glow-success {
+  0% { filter: drop-shadow(0 0 0 rgba(34, 197, 94, 0)); }
+  40% { filter: drop-shadow(0 0 7px rgba(34, 197, 94, 0.6)); }
+  100% { filter: drop-shadow(0 0 0 rgba(34, 197, 94, 0)); }
+}
+
+@keyframes toast-glow-error {
+  0% { filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
+  40% { filter: drop-shadow(0 0 7px rgba(239, 68, 68, 0.6)); }
+  100% { filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
+}
+
+/* Respect users who prefer reduced motion: skip the drawing animations. */
+@media (prefers-reduced-motion: reduce) {
+  .toast-in,
+  .toast-out,
+  .toast-icon-swirl,
+  .toast-icon-ring,
+  .toast-icon-mark,
+  .toast-icon-pop,
+  .toast-icon-glow-success,
+  .toast-icon-glow-error,
+  .toast-progress {
+    animation: none !important;
+  }
+  .toast-icon-ring,
+  .toast-icon-mark {
+    stroke-dashoffset: 0 !important;
+  }
+  .toast-icon-swirl {
+    opacity: 0 !important;
+  }
+}
