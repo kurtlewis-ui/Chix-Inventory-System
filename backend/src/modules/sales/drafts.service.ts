@@ -22,7 +22,6 @@ export class DraftsService {
    * empty draft around once every section is empty.
    */
   async upsertMine(dto: UpsertDraftDto, actor: RequestUser) {
-    const branchId = await this.resolveBranchForActor(actor);
     const disposalItems = dto.disposalItems ?? [];
     const expenses = dto.expenses ?? [];
 
@@ -31,19 +30,44 @@ export class DraftsService {
       return { message: 'Draft cleared' };
     }
 
-    const data = {
-      branchId,
+    // A draft belongs to the branch it was CREATED at, and must keep that
+    // branch for its whole life — even if the staff member is later reassigned
+    // to a different branch. So we only read the staff's current branch when
+    // there's no existing draft to CREATE one; an existing draft's branchId is
+    // preserved and never rewritten on update.
+    //
+    // Why this matters: the staff cart auto-syncs on every edit (a debounced
+    // PUT), and a reassigned staff's `user.branchId` reflects the NEW branch
+    // live. Previously upsertMine re-derived branchId from the current user on
+    // every save, so a draft built at Branch A would silently flip to Branch B
+    // once the staff was moved — and the owner's "Save Draft" then created the
+    // sale under B. Preserving the original branch here fixes that at the root
+    // (saveForStaff already uses draft.branchId, so it becomes correct too).
+    const existing = await this.prisma.draftOrder.findUnique({
+      where: { staffId: actor.userId },
+      select: { branchId: true },
+    });
+
+    const commonData = {
       items: dto.items as unknown as Prisma.InputJsonValue,
       disposalItems: disposalItems as unknown as Prisma.InputJsonValue,
       expenses: expenses as unknown as Prisma.InputJsonValue,
       customerName: dto.customerName?.trim() || null,
     };
 
-    await this.prisma.draftOrder.upsert({
-      where: { staffId: actor.userId },
-      create: { staffId: actor.userId, ...data },
-      update: data,
-    });
+    if (existing) {
+      // Keep the draft's original branch — do NOT touch branchId on update.
+      await this.prisma.draftOrder.update({
+        where: { staffId: actor.userId },
+        data: commonData,
+      });
+    } else {
+      // Brand-new draft: anchor it to the staff's current branch.
+      const branchId = await this.resolveBranchForActor(actor);
+      await this.prisma.draftOrder.create({
+        data: { staffId: actor.userId, branchId, ...commonData },
+      });
+    }
 
     return { message: 'Draft saved' };
   }
