@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { Select } from '@/components/Select';
 import { useUnsavedGuard } from '@/lib/useUnsavedGuard';
+import { useAuthStore } from '@/lib/store';
 import type { ApiEnvelope, Branch, RoleOption } from '@/lib/types';
 import { Modal } from './Modal';
 
@@ -21,6 +22,13 @@ const inputClass =
 export function AddStaffModal({ open, onClose, roles, branches }: AddStaffModalProps) {
   const queryClient = useQueryClient();
 
+  // An Admin may only create STAFF accounts (the backend enforces this too), so
+  // for an Admin we restrict the role picker to just Staff. An Owner keeps the
+  // full choice of roles.
+  const currentRole = useAuthStore((s) => s.user?.role?.name);
+  const isOwner = currentRole === 'Owner';
+  const selectableRoles = isOwner ? roles : roles.filter((r) => r.name === 'Staff');
+
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -31,9 +39,10 @@ export function AddStaffModal({ open, onClose, roles, branches }: AddStaffModalP
   const [formError, setFormError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
 
-  // Default the select to "Staff" (or the first role) until the user picks one.
+  // Default the select to "Staff" (or the first selectable role) until the user
+  // picks one.
   const defaultRoleId =
-    roles.find((r) => r.name.toLowerCase() === 'staff')?.id ?? roles[0]?.id ?? '';
+    selectableRoles.find((r) => r.name.toLowerCase() === 'staff')?.id ?? selectableRoles[0]?.id ?? '';
   const selectedRoleId = roleId || defaultRoleId;
 
   // Determine whether the chosen role is "Staff" (which should require a branch).
@@ -147,10 +156,13 @@ export function AddStaffModal({ open, onClose, roles, branches }: AddStaffModalP
             value={selectedRoleId}
             onChange={(v) => { setRoleId(v); setDirty(true); }}
             ariaLabel="Role"
-            placeholder={roles.length === 0 ? 'Loading roles…' : 'Select role'}
+            placeholder={selectableRoles.length === 0 ? 'Loading roles…' : 'Select role'}
             className="w-full"
-            options={roles.map((r) => ({ value: r.id, label: r.name }))}
+            options={selectableRoles.map((r) => ({ value: r.id, label: r.name }))}
           />
+          {!isOwner && (
+            <p className="mt-1 text-xs text-text-muted">Admins can only create Staff accounts.</p>
+          )}
         </div>
 
         <div>

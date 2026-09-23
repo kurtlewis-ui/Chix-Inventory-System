@@ -29,6 +29,7 @@ import { NumberStepper } from '@/components/NumberStepper';
 import { useUnsavedGuard, withScrollPreserved } from '@/lib/useUnsavedGuard';
 import { useStoredBranch } from '@/lib/useStoredBranch';
 import { filterSalesByProduct } from '@/lib/sale-search';
+import { useAuthStore } from '@/lib/store';
 import type { Sale, PaymentMethod, PaymentSplit } from '@/lib/types';
 
 function peso(n: number) {
@@ -236,6 +237,10 @@ export default function SalesPendingPage() {
   });
   const sales = useMemo(() => filterSalesByProduct(data?.data ?? [], search), [data?.data, search]);
   const summary = data?.summary ?? { grossSales: 0, cash: 0, gcash: 0, discount: 0, total: 0, count: 0 };
+
+  // Admin may approve/decline pending sales but must NOT edit them (the backend
+  // rejects Admin edits too). Only the Owner sees the Edit control here.
+  const canEditSale = useAuthStore((s) => s.user?.role?.name === 'Owner');
 
   const approveSale = useApproveSale();
   const declineSale = useDeclineSale();
@@ -513,7 +518,7 @@ export default function SalesPendingPage() {
                           <div className="act-group">
                             <button onClick={() => runSafe(async () => { await approveSale.mutateAsync(sale.id); setActionStatus(`✓ Sale #${sale.number} approved.`); })} className="act-btn act-approve" title="Approve"><CheckCircle size={16} /></button>
                             <button onClick={() => runSafe(async () => { await declineSale.mutateAsync(sale.id); setActionStatus(`Sale #${sale.number} declined.`); })} className="act-btn act-decline" title="Decline"><XCircle size={16} /></button>
-                            <button onClick={() => { setActionError(null); setEditingSale(sale); }} className="act-btn act-edit" title="Edit"><Pencil size={16} /></button>
+                            {canEditSale && <button onClick={() => { setActionError(null); setEditingSale(sale); }} className="act-btn act-edit" title="Edit"><Pencil size={16} /></button>}
                           </div>
                         )}
                       </td>
@@ -550,7 +555,7 @@ export default function SalesPendingPage() {
                       <div className="act-group shrink-0">
                         <button onClick={() => runSafe(async () => { await approveSale.mutateAsync(sale.id); setActionStatus(`✓ Sale #${sale.number} approved.`); })} className="act-btn act-approve" title="Approve"><CheckCircle size={16} /></button>
                         <button onClick={() => runSafe(async () => { await declineSale.mutateAsync(sale.id); setActionStatus(`Sale #${sale.number} declined.`); })} className="act-btn act-decline" title="Decline"><XCircle size={16} /></button>
-                        <button onClick={() => { setActionError(null); setEditingSale(sale); }} className="act-btn act-edit" title="Edit"><Pencil size={16} /></button>
+                        {canEditSale && <button onClick={() => { setActionError(null); setEditingSale(sale); }} className="act-btn act-edit" title="Edit"><Pencil size={16} /></button>}
                       </div>
                     </div>
                     <ul className="space-y-1.5">

@@ -12,9 +12,13 @@ import { getApiErrorMessage } from '@/lib/api';
 import { usePagination, Pagination } from '@/components/Pagination';
 import { Select } from '@/components/Select';
 import { useUnsavedGuard, withScrollPreserved } from '@/lib/useUnsavedGuard';
+import { useAuthStore } from '@/lib/store';
 import type { Branch } from '@/lib/types';
 
 export default function ShopsPage() {
+  // Shops are Owner-managed. Admin gets a strictly read-only view (no add /
+  // edit / archive) — the backend enforces this too (branches are Owner-only).
+  const canManage = useAuthStore((s) => s.user?.role?.name === 'Owner');
   const { data, isLoading, isError, error } = useBranches();
   const createBranch = useCreateBranch();
   const updateBranch = useUpdateBranch();
@@ -94,13 +98,15 @@ export default function ShopsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-text-primary">Shops</h1>
-        <button
-          onClick={() => { setNewName(''); setNewAddress(''); setFormError(null); setFormDirty(false); setShowAddModal(true); }}
-          className="flex items-center gap-2 btn-grad px-4 py-2 rounded-lg text-sm font-medium"
-        >
-          <Plus size={16} />
-          Add new Shop
-        </button>
+        {canManage && (
+          <button
+            onClick={() => { setNewName(''); setNewAddress(''); setFormError(null); setFormDirty(false); setShowAddModal(true); }}
+            className="flex items-center gap-2 btn-grad px-4 py-2 rounded-lg text-sm font-medium"
+          >
+            <Plus size={16} />
+            Add new Shop
+          </button>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -148,22 +154,24 @@ export default function ShopsPage() {
                   <td className="px-4 py-3 text-sm text-text-secondary">{shop.address || '—'}</td>
                   <td className="px-4 py-3 text-sm text-text-secondary">{shop.staffCount}</td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => { setEditingShop(shop); setNewName(shop.name); setNewAddress(shop.address ?? ''); setFormError(null); setFormDirty(false); setShowEditModal(true); }}
-                        className="icon-btn text-accent-blue hover:bg-accent-blue/10"
-                        title="Edit"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        onClick={() => { setArchivingShop(shop); setFormError(null); setShowArchiveModal(true); }}
-                        className="icon-btn text-accent-archive hover:bg-accent-archive/10"
-                        title="Archive"
-                      >
-                        <Archive size={16} />
-                      </button>
-                    </div>
+                    {canManage && (
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => { setEditingShop(shop); setNewName(shop.name); setNewAddress(shop.address ?? ''); setFormError(null); setFormDirty(false); setShowEditModal(true); }}
+                          className="icon-btn text-accent-blue hover:bg-accent-blue/10"
+                          title="Edit"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          onClick={() => { setArchivingShop(shop); setFormError(null); setShowArchiveModal(true); }}
+                          className="icon-btn text-accent-archive hover:bg-accent-archive/10"
+                          title="Archive"
+                        >
+                          <Archive size={16} />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))
@@ -193,24 +201,26 @@ export default function ShopsPage() {
                       <p className="mt-1 text-sm text-text-secondary break-words">{shop.address || '—'}</p>
                       <p className="mt-1 text-xs text-text-muted">Staff: <span className="text-text-secondary">{shop.staffCount}</span></p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <button
-                        onClick={() => { setEditingShop(shop); setNewName(shop.name); setNewAddress(shop.address ?? ''); setFormError(null); setFormDirty(false); setShowEditModal(true); }}
-                        className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-blue hover:bg-accent-blue/10 transition-colors"
-                        title="Edit"
-                        aria-label={`Edit ${shop.name}`}
-                      >
-                        <Pencil size={18} />
-                      </button>
-                      <button
-                        onClick={() => { setArchivingShop(shop); setFormError(null); setShowArchiveModal(true); }}
-                        className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-archive hover:bg-accent-archive/10 transition-colors"
-                        title="Archive"
-                        aria-label={`Archive ${shop.name}`}
-                      >
-                        <Archive size={18} />
-                      </button>
-                    </div>
+                    {canManage && (
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button
+                          onClick={() => { setEditingShop(shop); setNewName(shop.name); setNewAddress(shop.address ?? ''); setFormError(null); setFormDirty(false); setShowEditModal(true); }}
+                          className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-blue hover:bg-accent-blue/10 transition-colors"
+                          title="Edit"
+                          aria-label={`Edit ${shop.name}`}
+                        >
+                          <Pencil size={18} />
+                        </button>
+                        <button
+                          onClick={() => { setArchivingShop(shop); setFormError(null); setShowArchiveModal(true); }}
+                          className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-archive hover:bg-accent-archive/10 transition-colors"
+                          title="Archive"
+                          aria-label={`Archive ${shop.name}`}
+                        >
+                          <Archive size={18} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </li>
               ))}
