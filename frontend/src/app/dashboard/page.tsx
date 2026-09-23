@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Store, Package, PhilippinePeso, Users, BarChart3, ChevronDown, ChevronUp, Recycle, Download } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -34,29 +33,16 @@ const DONUT_COLORS_DARK = ['#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171'
 const DONUT_COLORS_LIGHT = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#84cc16'];
 
 export default function DashboardPage() {
-  const router = useRouter();
   const currentRole = useAuthStore((s) => s.user?.role?.name);
+  // Owner and Admin both see the dashboard. Admin sees the same overview but
+  // WITHOUT the Profit & Loss section (which is derived from confidential cost
+  // prices). The flag is passed down so the cost-bearing section is omitted.
+  const isOwner = currentRole === 'Owner';
 
-  // Admin only has access to Staff page — redirect them away from the dashboard
-  useEffect(() => {
-    if (currentRole === 'Admin') {
-      router.replace('/dashboard/users');
-    }
-  }, [currentRole, router]);
-
-  // Don't render the dashboard for Admin while redirecting
-  if (currentRole === 'Admin') {
-    return (
-      <main className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-text-muted">Redirecting...</p>
-      </main>
-    );
-  }
-
-  return <OwnerDashboard />;
+  return <OwnerDashboard isOwner={isOwner} />;
 }
 
-function OwnerDashboard() {
+function OwnerDashboard({ isOwner }: { isOwner: boolean }) {
   const { contentTheme } = useThemeStore();
   const isDark = contentTheme === 'dark';
   const toast = useToast();
@@ -155,11 +141,13 @@ function OwnerDashboard() {
         <StatsCard href="/dashboard/users" icon={<Users size={24} />} value={v(stats?.staff)} label="Staff" subtitle={`${v(stats?.admins)} Admins`} accentColor="#a78bfa" />
       </div>
 
-      {/* Owner-only Profit & Loss section */}
-      <OwnerProfitSection />
+      {/* Owner-only Profit & Loss section — uses confidential cost prices, so
+          it is never rendered for Admin (the /stats/profit-summary endpoint is
+          Owner-only on the backend too). */}
+      {isOwner && <OwnerProfitSection />}
 
       {/* NOTE: The old "Revenue" summary box was removed here. It only ever
-          showed to the Owner (Admins are redirected away from this dashboard),
+          showed to the Owner (the Profit & Loss section is Owner-only),
           and it was fully redundant with the Owner-only "Profit & Loss" box
           above — which shows the same Sales/Expenses/Disposal Losses PLUS
           Capital (cost of goods), Net Profit, and Margin. One box, no

@@ -60,8 +60,28 @@ const ownerNavItems: NavItem[] = [
   },
 ];
 
+// Admin is a viewer/approver: it sees most of what the Owner sees, but the
+// pages themselves render read-only (no create/edit/restock/delete) and never
+// expose cost. The only actions Admin performs are approving/declining pending
+// sales, disposals and expenses, plus managing Staff accounts + branch
+// assignments. Cost-derived pages (Profit & Loss) and Archive are omitted.
 const adminNavItems: NavItem[] = [
+  { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={18} /> },
+  { label: 'Shops', href: '/dashboard/shops', icon: <Store size={18} /> },
+  { label: 'Brands', href: '/dashboard/brands', icon: <Tag size={18} /> },
+  { label: 'Products', href: '/dashboard/products', icon: <Package size={18} /> },
+  {
+    label: 'Sales',
+    href: '/dashboard/sales',
+    icon: <PhilippinePeso size={18} />,
+    dropdown: [
+      { label: 'Records', href: '/dashboard/sales/records' },
+      { label: 'Pending', href: '/dashboard/sales/pending' },
+      { label: 'Disposals', href: '/dashboard/sales/disposals' },
+    ],
+  },
   { label: 'Staff', href: '/dashboard/users', icon: <Users size={18} /> },
+  { label: 'Activity Logs', href: '/dashboard/activity-logs', icon: <ClipboardList size={18} /> },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {

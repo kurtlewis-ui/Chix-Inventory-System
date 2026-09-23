@@ -49,11 +49,16 @@ export default function ProductsPage() {
   const brands = brandData?.data ?? [];
   // Shared+persisted branch filter ('' = All Shops), remembered across the site.
   const [shopFilter, setShopFilter] = useStoredBranch(branches);
-  const isAdmin = useAuthStore((s) => {
-    const role = s.user?.role?.name;
-    return role === 'Admin' || role === 'Owner';
-  });
+  // Product management (add / edit / restock / import / reorder / archive) is
+  // Owner-only — the backend enforces this too (PR: admin authorization). Admin
+  // gets a strictly READ-ONLY products page: it can view stock and open the
+  // Stock History, but every mutating control is hidden. `canManage` therefore
+  // means "is the Owner"; `isOwner` is kept as an explicit alias for the few
+  // Owner-only extras (cost price field, Reset Stock, undo).
   const isOwner = useAuthStore((s) => s.user?.role?.name === 'Owner');
+  const canManage = isOwner;
+  // Kept for readability where the old name was used to gate management UI.
+  const isAdmin = canManage;
 
   // Fetch the max the backend allows (200) so ALL products are available for
   // the client-side pagination/slicing below. Without this the query defaulted
@@ -295,16 +300,16 @@ export default function ProductsPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <h1 className="text-2xl font-bold text-text-primary">Products</h1>
         <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => setShowImportModal(true)} className="flex items-center gap-1 bg-btn-primary text-btn-primary-text px-3 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition"><Upload size={14} /> Import</button>
+          {canManage && <button onClick={() => setShowImportModal(true)} className="flex items-center gap-1 bg-btn-primary text-btn-primary-text px-3 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition"><Upload size={14} /> Import</button>}
           <button onClick={handleExport} className="flex items-center gap-1 bg-btn-primary text-btn-primary-text px-3 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition"><Download size={14} /> Export</button>
-          <button onClick={openAddModal} className="flex items-center gap-1 btn-grad px-3 py-2 rounded-lg text-sm font-medium"><Plus size={14} /> Add Product</button>
+          {canManage && <button onClick={openAddModal} className="flex items-center gap-1 btn-grad px-3 py-2 rounded-lg text-sm font-medium"><Plus size={14} /> Add Product</button>}
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <Select value={shopFilter} onChange={setShopFilter} ariaLabel="Shop filter" className="min-w-[180px] w-auto" options={[{ value: '', label: 'All Shops' }, ...branches.map((b) => ({ value: b.id, label: b.name }))]} />
-        <button onClick={() => setShowRestockModal(true)} className="flex items-center gap-1 bg-btn-primary text-btn-primary-text px-3 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition"><RefreshCw size={14} /> Restock</button>
-        <button onClick={handleTemplate} className="flex items-center gap-1 btn-secondary text-text-primary px-3 py-2 rounded-lg text-sm font-medium"><FileDown size={14} /> Restock Template</button>
+        {canManage && <button onClick={() => setShowRestockModal(true)} className="flex items-center gap-1 bg-btn-primary text-btn-primary-text px-3 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition"><RefreshCw size={14} /> Restock</button>}
+        {canManage && <button onClick={handleTemplate} className="flex items-center gap-1 btn-secondary text-text-primary px-3 py-2 rounded-lg text-sm font-medium"><FileDown size={14} /> Restock Template</button>}
         {isAdmin && (
           <button
             onClick={() => setReorderMode((v) => !v)}
@@ -457,8 +462,8 @@ export default function ProductsPage() {
                   <td className="px-3 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       {shopFilter && <button onClick={() => setHistoryProduct(product)} className="icon-btn text-text-secondary hover:bg-white/10" title="Stock History"><ClipboardList size={16} /></button>}
-                      <button onClick={() => openEditModal(product)} className="icon-btn text-accent-blue hover:bg-accent-blue/10"><Pencil size={16} /></button>
-                      <button onClick={() => { setArchivingProduct(product); setFormError(null); setShowArchiveModal(true); }} className="icon-btn text-accent-archive hover:bg-accent-archive/10"><Archive size={16} /></button>
+                      {canManage && <button onClick={() => openEditModal(product)} className="icon-btn text-accent-blue hover:bg-accent-blue/10"><Pencil size={16} /></button>}
+                      {canManage && <button onClick={() => { setArchivingProduct(product); setFormError(null); setShowArchiveModal(true); }} className="icon-btn text-accent-archive hover:bg-accent-archive/10"><Archive size={16} /></button>}
                     </div>
                   </td>
                 </tr>
@@ -512,8 +517,8 @@ export default function ProductsPage() {
                     </div>
                     <div className="flex shrink-0 items-center">
                       {shopFilter && <button onClick={() => setHistoryProduct(product)} className="flex h-12 w-12 items-center justify-center rounded-lg text-text-secondary hover:bg-white/10 transition-colors" title="Stock History" aria-label="Stock history"><ClipboardList size={18} /></button>}
-                      <button onClick={() => openEditModal(product)} className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-blue hover:bg-accent-blue/10 transition-colors" title="Edit" aria-label={`Edit ${product.name}`}><Pencil size={18} /></button>
-                      <button onClick={() => { setArchivingProduct(product); setFormError(null); setShowArchiveModal(true); }} className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-archive hover:bg-accent-archive/10 transition-colors" title="Archive" aria-label={`Archive ${product.name}`}><Archive size={18} /></button>
+                      {canManage && <button onClick={() => openEditModal(product)} className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-blue hover:bg-accent-blue/10 transition-colors" title="Edit" aria-label={`Edit ${product.name}`}><Pencil size={18} /></button>}
+                      {canManage && <button onClick={() => { setArchivingProduct(product); setFormError(null); setShowArchiveModal(true); }} className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-archive hover:bg-accent-archive/10 transition-colors" title="Archive" aria-label={`Archive ${product.name}`}><Archive size={18} /></button>}
                     </div>
                   </div>
 

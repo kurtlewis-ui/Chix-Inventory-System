@@ -12,6 +12,7 @@ import { getApiErrorMessage } from '@/lib/api';
 import { ImageCropModal } from '@/components/ImageCropModal';
 import { Select } from '@/components/Select';
 import { useUnsavedGuard, withScrollPreserved } from '@/lib/useUnsavedGuard';
+import { useAuthStore } from '@/lib/store';
 import type { Brand } from '@/lib/types';
 
 const PAGE_SIZES = [5, 10, 25, 50, 'All'] as const;
@@ -29,6 +30,9 @@ export default function BrandsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  // Brands are part of the catalog — Owner-managed. Admin gets a read-only
+  // view (backend also restricts brand mutations to Owner).
+  const canManage = useAuthStore((s) => s.user?.role?.name === 'Owner');
   const { data, isLoading, isError, error } = useBrands(debouncedSearch);
   const createBrand = useCreateBrand();
   const updateBrand = useUpdateBrand();
@@ -95,13 +99,15 @@ export default function BrandsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-text-primary">Brands</h1>
-        <button
-          onClick={() => { setFormName(''); setFormCoverImage(null); setFormError(null); setFormDirty(false); setShowAddModal(true); }}
-          className="flex items-center gap-2 btn-grad px-4 py-2 rounded-lg text-sm font-medium"
-        >
-          <Plus size={16} />
-          Add new Brand
-        </button>
+        {canManage && (
+          <button
+            onClick={() => { setFormName(''); setFormCoverImage(null); setFormError(null); setFormDirty(false); setShowAddModal(true); }}
+            className="flex items-center gap-2 btn-grad px-4 py-2 rounded-lg text-sm font-medium"
+          >
+            <Plus size={16} />
+            Add new Brand
+          </button>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -157,6 +163,7 @@ export default function BrandsPage() {
                   <td className="px-4 py-3 text-sm font-bold text-text-primary">{brand.name}</td>
                   <td className="px-4 py-3 text-sm text-text-secondary">{brand.productCount}</td>
                   <td className="px-4 py-3 text-right">
+                    {canManage && (
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => { setEditingBrand(brand); setFormName(brand.name); setFormCoverImage(brand.coverImage ?? null); setFormError(null); setFormDirty(false); setShowEditModal(true); }}
@@ -171,6 +178,7 @@ export default function BrandsPage() {
                         <Archive size={16} />
                       </button>
                     </div>
+                    )}
                   </td>
                 </tr>
               ))
@@ -204,6 +212,7 @@ export default function BrandsPage() {
                     </p>
                     <p className="text-xs text-text-secondary">Products: {brand.productCount}</p>
                   </div>
+                  {canManage && (
                   <div className="flex shrink-0 items-center gap-1">
                     <button
                       onClick={() => { setEditingBrand(brand); setFormName(brand.name); setFormCoverImage(brand.coverImage ?? null); setFormError(null); setFormDirty(false); setShowEditModal(true); }}
@@ -214,6 +223,7 @@ export default function BrandsPage() {
                       className="flex h-10 w-10 items-center justify-center rounded-lg text-accent-archive hover:bg-accent-archive/10"
                     ><Archive size={16} /></button>
                   </div>
+                  )}
                 </li>
               ))}
             </ul>

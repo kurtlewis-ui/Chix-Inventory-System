@@ -13,6 +13,7 @@ import {
 } from '@/lib/hooks';
 import { getApiErrorMessage } from '@/lib/api';
 import { ImageCropModal } from '@/components/ImageCropModal';
+import { AddStaffModal } from '@/components/AddStaffModal';
 import { useAuthStore } from '@/lib/store';
 import { Select } from '@/components/Select';
 import { useUnsavedGuard, withScrollPreserved } from '@/lib/useUnsavedGuard';
@@ -59,8 +60,10 @@ function AdminStaffView() {
   const [search, setSearch] = useState('');
   const { data, isLoading, isError, error } = useUsers(search);
   const { data: branchData } = useBranches();
+  const { data: roles = [] } = useRoles();
   const branches = branchData?.data ?? [];
   const updateUser = useUpdateUser();
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const users = data?.data ?? [];
   // Admin can only see Staff role users
@@ -110,9 +113,17 @@ function AdminStaffView() {
 
   return (
     <div className="p-6 bg-page-bg min-h-screen">
-      <div className="mb-6">
-        <p className="text-xs text-text-muted font-medium uppercase tracking-wider">Manage</p>
-        <h1 className="text-2xl font-bold text-text-primary">Staff</h1>
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs text-text-muted font-medium uppercase tracking-wider">Manage</p>
+          <h1 className="text-2xl font-bold text-text-primary">Staff</h1>
+        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-2 btn-grad px-4 py-2 rounded-lg text-sm font-medium"
+        >
+          <Plus size={16} /> Add Staff
+        </button>
       </div>
 
       <div className="bg-card-bg rounded-xl border border-card-border shadow-sm">
@@ -251,6 +262,10 @@ function AdminStaffView() {
           )}
         </div>
       </div>
+
+      {/* Add Staff — the modal restricts the role picker to Staff for a
+          non-Owner, and the backend rejects any non-Staff role from an Admin. */}
+      <AddStaffModal open={showAddModal} onClose={() => setShowAddModal(false)} roles={roles} branches={branches} />
 
       {/* Assign Branch Modal */}
       {showBranchModal && selectedUser && (
