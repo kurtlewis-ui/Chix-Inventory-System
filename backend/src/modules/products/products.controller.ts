@@ -33,7 +33,7 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
-  @Roles('Owner', 'Admin')
+  @Roles('Owner')
   @ApiOperation({ summary: 'Create a new product' })
   async create(@Body() dto: CreateProductDto, @CurrentUser() user: RequestUser) {
     const data = await this.productsService.create(dto, user.userId, user.role);
@@ -48,7 +48,7 @@ export class ProductsController {
   }
 
   @Post('import')
-  @Roles('Owner', 'Admin')
+  @Roles('Owner')
   @ApiOperation({ summary: 'Bulk import products (creates/updates; auto-creates brands)' })
   async importProducts(@Body() dto: ImportProductsDto, @CurrentUser() user: RequestUser) {
     const data = await this.productsService.importProducts(dto.products, user.userId);
@@ -56,7 +56,7 @@ export class ProductsController {
   }
 
   @Post('restock')
-  @Roles('Owner', 'Admin')
+  @Roles('Owner')
   @ApiOperation({ summary: 'Add stock to products at branches' })
   async restock(@Body() dto: RestockDto, @CurrentUser() user: RequestUser) {
     const data = await this.productsService.restock(dto.items, user.userId);
@@ -80,7 +80,7 @@ export class ProductsController {
   }
 
   @Patch('reorder')
-  @Roles('Owner', 'Admin')
+  @Roles('Owner')
   @ApiOperation({ summary: 'Persist a manual product display order' })
   async reorder(@Body() dto: ReorderProductsDto, @CurrentUser() user: RequestUser) {
     const data = await this.productsService.reorder(dto.orderedIds, user.userId);
@@ -89,7 +89,7 @@ export class ProductsController {
 
   @Get('archived')
   @Roles('Owner', 'Admin')
-  @ApiOperation({ summary: 'List archived (soft-deleted) products' })
+  @ApiOperation({ summary: 'List archived (soft-deleted) products (read-only for Admin)' })
   async findArchived(@Query() query: QueryProductDto, @CurrentUser() user: RequestUser) {
     const result = await this.productsService.findArchived(query, user.role);
     return { success: true, data: result.data, pagination: result.pagination };
@@ -103,7 +103,7 @@ export class ProductsController {
   }
 
   @Patch(':id')
-  @Roles('Owner', 'Admin')
+  @Roles('Owner')
   @ApiOperation({ summary: 'Update a product (and per-branch stock)' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -115,7 +115,7 @@ export class ProductsController {
   }
 
   @Post(':id/restore')
-  @Roles('Owner', 'Admin')
+  @Roles('Owner')
   @ApiOperation({ summary: 'Restore an archived product' })
   async restore(
     @Param('id', ParseUUIDPipe) id: string,
@@ -126,7 +126,7 @@ export class ProductsController {
   }
 
   @Delete(':id')
-  @Roles('Owner', 'Admin')
+  @Roles('Owner')
   @ApiOperation({ summary: 'Archive (soft-delete) a product' })
   async remove(
     @Param('id', ParseUUIDPipe) id: string,
