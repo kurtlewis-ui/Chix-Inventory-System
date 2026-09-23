@@ -43,17 +43,23 @@ function paymentDotColor(pm: PaymentMethod) {
   switch (pm) {
     case 'Cash': return 'bg-accent-green';
     case 'Gcash': return 'bg-accent-blue';
+    case 'BankTransfer': return 'bg-accent-purple';
     default: return 'bg-text-muted';
   }
+}
+function methodLabel(pm: PaymentMethod): string {
+  return pm === 'BankTransfer' ? 'Bank Transfer' : pm;
 }
 function itemPaymentLabel(item: { paymentMethod: PaymentMethod; bankNote?: string | null; paymentSplit?: PaymentSplit | null }) {
   if (item.paymentMethod === 'Split' && item.paymentSplit) {
     const parts: string[] = [];
     if (item.paymentSplit.cash > 0) parts.push(`₱${item.paymentSplit.cash.toLocaleString(undefined, { minimumFractionDigits: 2 })} Cash`);
     if (item.paymentSplit.gcash > 0) parts.push(`₱${item.paymentSplit.gcash.toLocaleString(undefined, { minimumFractionDigits: 2 })} Gcash`);
+    if ((item.paymentSplit.bankTransfer ?? 0) > 0) parts.push(`₱${item.paymentSplit.bankTransfer.toLocaleString(undefined, { minimumFractionDigits: 2 })} Bank`);
+    if ((item.paymentSplit.cashless ?? 0) > 0) parts.push(`₱${item.paymentSplit.cashless.toLocaleString(undefined, { minimumFractionDigits: 2 })} Cashless`);
     return parts.join(' · ') || 'Split';
   }
-  return item.paymentMethod;
+  return methodLabel(item.paymentMethod);
 }
 
 // Local modal for this page. `size` controls the max width — default keeps the
@@ -235,7 +241,7 @@ export default function SalesPendingPage() {
     branchId: selectedShop || undefined,
   });
   const sales = useMemo(() => filterSalesByProduct(data?.data ?? [], search), [data?.data, search]);
-  const summary = data?.summary ?? { grossSales: 0, cash: 0, gcash: 0, discount: 0, total: 0, count: 0 };
+  const summary = data?.summary ?? { grossSales: 0, cash: 0, gcash: 0, bankTransfer: 0, cashless: 0, discount: 0, total: 0, count: 0 };
 
   const approveSale = useApproveSale();
   const declineSale = useDeclineSale();
@@ -606,6 +612,18 @@ export default function SalesPendingPage() {
                 <span className="text-text-muted">Gcash</span>
                 <span className="text-text-secondary tabular-nums">{peso(summary.gcash)}</span>
               </div>
+              {summary.bankTransfer > 0 && (
+                <div className="flex items-center justify-between gap-4 pl-3 text-sm">
+                  <span className="text-text-muted">Bank Transfer</span>
+                  <span className="text-text-secondary tabular-nums">{peso(summary.bankTransfer)}</span>
+                </div>
+              )}
+              {summary.cashless > 0 && (
+                <div className="flex items-center justify-between gap-4 pl-3 text-sm">
+                  <span className="text-text-muted">Cashless</span>
+                  <span className="text-text-secondary tabular-nums">{peso(summary.cashless)}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

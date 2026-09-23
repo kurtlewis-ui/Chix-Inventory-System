@@ -124,15 +124,22 @@ export interface Product {
   deletedAt: string | null;
 }
 
-// Cash/Gcash are the primary payment methods. Split means the item's cost
-// was divided across Cash and Gcash. Mixed is a Sale-level-only rollup shown
-// when its items don't all agree.
-export type PaymentMethod = 'Cash' | 'Gcash' | 'Split' | 'Mixed';
+// Cash / Gcash / Bank Transfer are the concrete payment methods (Cashless is a
+// generic "paid digitally, unspecified" bucket the backend also supports).
+// Split means the item's cost was divided across those buckets. Mixed is a
+// Sale-level-only rollup shown when its items don't all agree.
+// NOTE: these mirror the backend PaymentMethod enum exactly.
+export type PaymentMethod = 'Cash' | 'Gcash' | 'BankTransfer' | 'Cashless' | 'Split' | 'Mixed';
 export type SaleStatus = 'PENDING' | 'APPROVED' | 'DECLINED';
 
+// The per-bucket breakdown of a Split payment. Matches the backend shape —
+// the server always recomputes `cashless` as the remainder, so all four
+// buckets sum to the line's subtotal.
 export interface PaymentSplit {
   cash: number;
   gcash: number;
+  bankTransfer: number;
+  cashless: number;
 }
 
 export interface SaleLineItem {
@@ -171,6 +178,8 @@ export interface SalesSummary {
   grossSales: number; // Σ(unitPrice × qty) BEFORE discount; total = grossSales − discount
   cash: number;
   gcash: number;
+  bankTransfer: number; // Bank Transfer bucket (matches backend summary)
+  cashless: number; // generic "paid digitally, unspecified" bucket
   discount: number; // total per-item discount (Gross − Discount = Net; subtracted once)
   total: number; // NET total (after discount)
   count: number;

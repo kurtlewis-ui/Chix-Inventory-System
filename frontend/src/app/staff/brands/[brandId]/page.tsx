@@ -174,7 +174,7 @@ export default function BrandProductsPage() {
   );
 }
 
-type ItemPaymentMethod = 'Cash' | 'Gcash' | 'Split';
+type ItemPaymentMethod = 'Cash' | 'Gcash' | 'BankTransfer' | 'Split';
 
 function AddPurchaseModal({
   product,
@@ -190,7 +190,9 @@ function AddPurchaseModal({
   const [paymentMethod, setPaymentMethod] = useState<ItemPaymentMethod | ''>('');
   const [splitCash, setSplitCash] = useState('');
   const [splitGcash, setSplitGcash] = useState('');
-  const [lastSplitEdited, setLastSplitEdited] = useState<'cash' | 'gcash'>('cash');
+  const [splitBank, setSplitBank] = useState('');
+  // Bank reference/note for Bank Transfer (or a Split with a bank portion).
+  const [bankNote, setBankNote] = useState('');
   const [note, setNote] = useState('');
   const [disposalReason, setDisposalReason] = useState('');
   const [disposalNote, setDisposalNote] = useState('');
@@ -218,23 +220,16 @@ function AddPurchaseModal({
   const discountTooHigh = discountNumber > lineTotal + 0.001;
   const discountedTotal = Math.max(0, lineTotal - discountNumber);
 
-  // Keep the split payment balanced when the item total changes (e.g. the user
-  // sets the split first, then edits quantity or discount). We recompute the
-  // field that was NOT edited last so cash + gcash always equals the current
-  // total — avoiding a stale mismatch that would only surface at submit time.
-  useEffect(() => {
-    if (paymentMethod !== 'Split') return;
-    if (lastSplitEdited === 'cash') {
-      const cash = Math.min(Number(splitCash) || 0, discountedTotal);
-      setSplitGcash(Math.max(0, discountedTotal - cash).toFixed(2));
-    } else {
-      const gcash = Math.min(Number(splitGcash) || 0, discountedTotal);
-      setSplitCash(Math.max(0, discountedTotal - gcash).toFixed(2));
-    }
-    // Intentionally only re-run when the total or payment mode changes — not on
-    // every keystroke in the split fields (those are handled in their onChange).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [discountedTotal, paymentMethod]);
+  // Split allocation across the concrete buckets (cash/gcash/bankTransfer). The
+  // backend treats whatever is left of the line total as the generic "cashless"
+  // remainder, so we don't force the entered buckets to sum to the total — we
+  // just prevent OVER-allocating and surface the remainder to the staff.
+  const splitCashN = Number(splitCash) || 0;
+  const splitGcashN = Number(splitGcash) || 0;
+  const splitBankN = Number(splitBank) || 0;
+  const splitAllocated = splitCashN + splitGcashN + splitBankN;
+  const splitRemainder = discountedTotal - splitAllocated;
+  const splitOver = splitAllocated > discountedTotal + 0.001;
 
   function validQty(): number | null {
     const qty = Number(quantity);
@@ -262,14 +257,11 @@ function AddPurchaseModal({
       setError('Discount can\'t be more than this item\'s total.');
       return;
     }
-    if (paymentMethod === 'Split') {
-      const cashAmt = Number(splitCash) || 0;
-      const gcashAmt = Number(splitGcash) || 0;
-      if (Math.abs(cashAmt + gcashAmt - discountedTotal) > 0.01) {
-        setError('Split amounts must equal the item total.');
-        return;
-      }
+    if (paymentMethod === 'Split' && splitOver) {
+      setError('Split amounts can\'t exceed the item total.');
+      return;
     }
+    const usesBank = paymentMethod === 'BankTransfer' || paymentMethod === 'Split';
     addItem(
       {
         productId: product.id,
@@ -278,11 +270,17 @@ function AddPurchaseModal({
         unitPrice: product.sellingPrice,
         discount: discountNumber,
         paymentMethod,
-        bankNote: null,
+        bankNote: usesBank ? (bankNote.trim() || null) : null,
         note: note.trim() || null,
         paymentSplit:
           paymentMethod === 'Split'
-            ? { cash: Number(splitCash) || 0, gcash: Number(splitGcash) || 0 }
+            ? {
+                cash: splitCashN,
+                gcash: splitGcashN,
+                bankTransfer: splitBankN,
+                // Remainder → cashless, mirroring the server.
+                cashless: Math.max(0, splitRemainder),
+              }
             : null,
       },
       qty,
@@ -380,7 +378,7 @@ function AddPurchaseModal({
           {/* Payment Method — Toggle Buttons */}
           <div>
             <label className="block text-sm font-medium text-text-primary mb-2">Payment Method</label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <button
                 type="button"
                 onClick={() => { setPaymentMethod('Cash'); setDirty(true); }}
@@ -405,6 +403,17 @@ function AddPurchaseModal({
               </button>
               <button
                 type="button"
+                onClick={() => { setPaymentMethod('BankTransfer'); setDirty(true); }}
+                className={`py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                  paymentMethod === 'BankTransfer'
+                    ? 'bg-accent-purple text-white shadow-md'
+                    : 'border-2 border-input-border text-text-primary hover:border-accent-purple'
+                }`}
+              >
+                Bank Transfer
+              </button>
+              <button
+                type="button"
                 onClick={() => { setPaymentMethod('Split'); setDirty(true); }}
                 className={`py-2.5 rounded-lg text-sm font-semibold transition-all ${
                   paymentMethod === 'Split'
@@ -415,44 +424,75 @@ function AddPurchaseModal({
                 Split
               </button>
             </div>
+            {paymentMethod === 'BankTransfer' && (
+              <div className="mt-3">
+                <label className="block text-xs font-medium text-text-secondary mb-1">Bank / reference (optional)</label>
+                <input
+                  type="text"
+                  value={bankNote}
+                  onChange={(e) => { setBankNote(e.target.value); setDirty(true); }}
+                  placeholder="e.g. BPI · ref 12345"
+                  className="w-full rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm focus:outline-none focus:border-input-focus"
+                />
+              </div>
+            )}
             {paymentMethod === 'Split' && (
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-text-secondary mb-1">Cash (₱)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={splitCash}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setSplitCash(val);
-                      setLastSplitEdited('cash');
-                      const cashVal = Number(val) || 0;
-                      setSplitGcash(Math.max(0, discountedTotal - cashVal).toFixed(2));
-                    }}
-                    placeholder="0"
-                    className="w-full rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm focus:outline-none focus:border-input-focus"
-                  />
+              <div className="mt-3 space-y-3">
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-text-secondary mb-1">Cash (₱)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={splitCash}
+                      onChange={(e) => { setSplitCash(e.target.value); setDirty(true); }}
+                      placeholder="0"
+                      className="w-full rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm focus:outline-none focus:border-input-focus"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-text-secondary mb-1">Gcash (₱)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={splitGcash}
+                      onChange={(e) => { setSplitGcash(e.target.value); setDirty(true); }}
+                      placeholder="0"
+                      className="w-full rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm focus:outline-none focus:border-input-focus"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-text-secondary mb-1">Bank (₱)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={splitBank}
+                      onChange={(e) => { setSplitBank(e.target.value); setDirty(true); }}
+                      placeholder="0"
+                      className="w-full rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm focus:outline-none focus:border-input-focus"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-text-secondary mb-1">Gcash (₱)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={splitGcash}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setSplitGcash(val);
-                      setLastSplitEdited('gcash');
-                      const gcashVal = Number(val) || 0;
-                      setSplitCash(Math.max(0, discountedTotal - gcashVal).toFixed(2));
-                    }}
-                    placeholder="0"
-                    className="w-full rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm focus:outline-none focus:border-input-focus"
-                  />
-                </div>
+                {splitBankN > 0 && (
+                  <div>
+                    <label className="block text-xs font-medium text-text-secondary mb-1">Bank / reference (optional)</label>
+                    <input
+                      type="text"
+                      value={bankNote}
+                      onChange={(e) => { setBankNote(e.target.value); setDirty(true); }}
+                      placeholder="e.g. BPI · ref 12345"
+                      className="w-full rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm focus:outline-none focus:border-input-focus"
+                    />
+                  </div>
+                )}
+                <p className={`text-xs ${splitOver ? 'text-accent-red' : 'text-text-muted'}`}>
+                  {splitOver
+                    ? `Over by ${peso(splitAllocated - discountedTotal)} — item total is ${peso(discountedTotal)}`
+                    : `Remaining (unspecified): ${peso(Math.max(0, splitRemainder))} of ${peso(discountedTotal)}`}
+                </p>
               </div>
             )}
           </div>

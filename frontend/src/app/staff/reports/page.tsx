@@ -23,14 +23,16 @@ function formatDate(iso: string) {
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 }
-function itemPaymentLabel(item: { paymentMethod: string; bankNote?: string | null; paymentSplit?: { cash: number; gcash: number } | null }) {
+function itemPaymentLabel(item: { paymentMethod: string; bankNote?: string | null; paymentSplit?: { cash: number; gcash: number; bankTransfer?: number; cashless?: number } | null }) {
   if (item.paymentMethod === 'Split' && item.paymentSplit) {
     const parts: string[] = [];
     if (item.paymentSplit.cash > 0) parts.push(`₱${item.paymentSplit.cash.toLocaleString(undefined, { minimumFractionDigits: 2 })} Cash`);
     if (item.paymentSplit.gcash > 0) parts.push(`₱${item.paymentSplit.gcash.toLocaleString(undefined, { minimumFractionDigits: 2 })} Gcash`);
+    if ((item.paymentSplit.bankTransfer ?? 0) > 0) parts.push(`₱${item.paymentSplit.bankTransfer!.toLocaleString(undefined, { minimumFractionDigits: 2 })} Bank`);
+    if ((item.paymentSplit.cashless ?? 0) > 0) parts.push(`₱${item.paymentSplit.cashless!.toLocaleString(undefined, { minimumFractionDigits: 2 })} Cashless`);
     return parts.join(' · ') || 'Split';
   }
-  return item.paymentMethod;
+  return item.paymentMethod === 'BankTransfer' ? 'Bank Transfer' : item.paymentMethod;
 }
 // A submitted item is visible on the report the instant it's saved.
 // Declined items are excluded since they are permanently removed.
@@ -310,6 +312,8 @@ export default function StaffDailyReportPage() {
             <p className="text-sm font-semibold text-text-primary">Total Sales: <span className="font-bold">{peso(sales.reduce((sum, s) => sum + s.total, 0))}</span></p>
             <p className="text-sm text-text-secondary">Total Cash: <span className="font-medium text-text-primary">{peso(sales.reduce((sum, s) => s.items.filter((i) => i.paymentMethod === 'Cash' || (i.paymentMethod === 'Split' && i.paymentSplit)).reduce((a, i) => a + (i.paymentMethod === 'Cash' ? i.subTotal : (i.paymentSplit as any)?.cash ?? 0), 0) + sum, 0))}</span></p>
             <p className="text-sm text-text-secondary">Total Gcash: <span className="font-medium text-text-primary">{peso(sales.reduce((sum, s) => s.items.filter((i) => i.paymentMethod === 'Gcash' || (i.paymentMethod === 'Split' && i.paymentSplit)).reduce((a, i) => a + (i.paymentMethod === 'Gcash' ? i.subTotal : (i.paymentSplit as any)?.gcash ?? 0), 0) + sum, 0))}</span></p>
+            <p className="text-sm text-text-secondary">Total Bank Transfer: <span className="font-medium text-text-primary">{peso(sales.reduce((sum, s) => s.items.filter((i) => i.paymentMethod === 'BankTransfer' || (i.paymentMethod === 'Split' && i.paymentSplit)).reduce((a, i) => a + (i.paymentMethod === 'BankTransfer' ? i.subTotal : (i.paymentSplit as any)?.bankTransfer ?? 0), 0) + sum, 0))}</span></p>
+            <p className="text-sm text-text-secondary">Total Cashless: <span className="font-medium text-text-primary">{peso(sales.reduce((sum, s) => s.items.filter((i) => i.paymentMethod === 'Cashless' || (i.paymentMethod === 'Split' && i.paymentSplit)).reduce((a, i) => a + (i.paymentMethod === 'Cashless' ? i.subTotal : (i.paymentSplit as any)?.cashless ?? 0), 0) + sum, 0))}</span></p>
             <p className="text-sm text-text-secondary">Total Discount: <span className="font-medium text-text-primary">{peso(sales.reduce((sum, s) => sum + s.items.reduce((a, i) => a + (i.discount ?? 0), 0), 0))}</span></p>
           </div>
         </div>

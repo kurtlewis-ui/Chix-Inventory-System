@@ -7,11 +7,15 @@ import * as XLSX from 'xlsx-js-style';
 import { styleHeaderRow } from './xlsx-utils';
 import { api } from './api';
 
-function formatSplitBreakdown(split: { cash: number; gcash: number } | null): string {
+function formatSplitBreakdown(
+  split: { cash: number; gcash: number; bankTransfer?: number; cashless?: number } | null,
+): string {
   if (!split) return '';
   const parts: string[] = [];
   if (split.cash > 0) parts.push(`Cash ${split.cash}`);
   if (split.gcash > 0) parts.push(`Gcash ${split.gcash}`);
+  if ((split.bankTransfer ?? 0) > 0) parts.push(`Bank ${split.bankTransfer}`);
+  if ((split.cashless ?? 0) > 0) parts.push(`Cashless ${split.cashless}`);
   return parts.join(' / ');
 }
 
