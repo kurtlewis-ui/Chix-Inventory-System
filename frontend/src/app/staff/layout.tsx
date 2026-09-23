@@ -445,14 +445,18 @@ function DraftBag() {
   // item's Split-payment breakdown across its buckets. Line totals are
   // net of each item's discount.
   const paymentTotals = useMemo(() => {
-    const totals = { cash: 0, gcash: 0 };
+    const totals = { cash: 0, gcash: 0, bankTransfer: 0, cashless: 0 };
     for (const item of items) {
       const lineTotal = item.unitPrice * item.quantity - (item.discount ?? 0);
       if (item.paymentMethod === 'Split' && item.paymentSplit) {
-        totals.cash += item.paymentSplit.cash;
-        totals.gcash += item.paymentSplit.gcash;
+        totals.cash += item.paymentSplit.cash ?? 0;
+        totals.gcash += item.paymentSplit.gcash ?? 0;
+        totals.bankTransfer += item.paymentSplit.bankTransfer ?? 0;
+        totals.cashless += item.paymentSplit.cashless ?? 0;
       } else if (item.paymentMethod === 'Cash') totals.cash += lineTotal;
       else if (item.paymentMethod === 'Gcash') totals.gcash += lineTotal;
+      else if (item.paymentMethod === 'BankTransfer') totals.bankTransfer += lineTotal;
+      else if (item.paymentMethod === 'Cashless') totals.cashless += lineTotal;
     }
     return totals;
   }, [items]);
@@ -788,6 +792,18 @@ function DraftBag() {
                         <span className="text-text-secondary">Total Gcash</span>
                         <span className="text-text-primary">{peso(paymentTotals.gcash)}</span>
                       </div>
+                      {paymentTotals.bankTransfer > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-text-secondary">Total Bank Transfer</span>
+                          <span className="text-text-primary">{peso(paymentTotals.bankTransfer)}</span>
+                        </div>
+                      )}
+                      {paymentTotals.cashless > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-text-secondary">Total Cashless</span>
+                          <span className="text-text-primary">{peso(paymentTotals.cashless)}</span>
+                        </div>
+                      )}
                       {itemsDiscountTotal > 0 && (
                         <div className="flex items-center justify-between">
                           <span className="text-text-secondary">Total Discount</span>
@@ -849,6 +865,10 @@ function EditPaymentInline({
   const [method, setMethod] = useState<PaymentMethod>(item.paymentMethod);
   const [splitCash, setSplitCash] = useState(String(item.paymentSplit?.cash ?? ''));
   const [splitGcash, setSplitGcash] = useState(String(item.paymentSplit?.gcash ?? ''));
+  const [splitBank, setSplitBank] = useState(String(item.paymentSplit?.bankTransfer ?? ''));
+  // Bank reference/note — used for Bank Transfer (and for a Split that includes
+  // a bank-transfer portion). Optional free text (e.g. which bank / ref no.).
+  const [bankNote, setBankNote] = useState(item.bankNote ?? '');
 
   const lineTotal = item.unitPrice * item.quantity - (item.discount ?? 0);
 
@@ -856,13 +876,32 @@ function EditPaymentInline({
     return `₱${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
+  // For a Split, the three entered buckets (cash/gcash/bankTransfer) must not
+  // exceed the line total; the backend treats whatever is left over as the
+  // generic "cashless" remainder. We surface that remainder + an over-allocation
+  // warning so staff can see exactly how the line is being paid.
+  const splitCashN = Number(splitCash) || 0;
+  const splitGcashN = Number(splitGcash) || 0;
+  const splitBankN = Number(splitBank) || 0;
+  const allocated = splitCashN + splitGcashN + splitBankN;
+  const remainder = lineTotal - allocated;
+  const overAllocated = allocated > lineTotal + 0.001;
+
   function handleSave() {
+    const usesBank = method === 'BankTransfer' || method === 'Split';
     onSave({
       paymentMethod: method,
-      bankNote: null,
+      bankNote: usesBank ? (bankNote.trim() || null) : null,
       paymentSplit:
         method === 'Split'
-          ? { cash: Number(splitCash) || 0, gcash: Number(splitGcash) || 0 }
+          ? {
+              cash: splitCashN,
+              gcash: splitGcashN,
+              bankTransfer: splitBankN,
+              // Remainder mirrors the server, which recomputes cashless as
+              // subTotal − (cash + gcash + bankTransfer). Never negative.
+              cashless: Math.max(0, remainder),
+            }
           : null,
     });
   }
@@ -872,25 +911,47 @@ function EditPaymentInline({
       <Select value={method} onChange={(v) => setMethod(v as PaymentMethod)} ariaLabel="Payment method" className="w-full" options={[
         { value: 'Cash', label: 'Cash' },
         { value: 'Gcash', label: 'Gcash' },
+        { value: 'BankTransfer', label: 'Bank Transfer' },
         { value: 'Split', label: 'Split Payment' },
       ]} />
+      {method === 'BankTransfer' && (
+        <div>
+          <label className="block text-[10px] text-text-muted">Bank / reference (optional)</label>
+          <input type="text" value={bankNote} onChange={(e) => setBankNote(e.target.value)} placeholder="e.g. BPI · ref 12345" className="w-full rounded border border-input-border bg-input-bg px-1.5 py-0.5 text-xs" />
+        </div>
+      )}
       {method === 'Split' && (
         <div className="space-y-1">
-          <div className="grid grid-cols-2 gap-1">
+          <div className="grid grid-cols-3 gap-1">
             <div>
               <label className="block text-[10px] text-text-muted">Cash</label>
-              <input type="number" min="0" step="0.01" value={splitCash} onChange={(e) => { setSplitCash(e.target.value); setSplitGcash(Math.max(0, lineTotal - (Number(e.target.value) || 0)).toFixed(2)); }} className="w-full rounded border border-input-border bg-input-bg px-1.5 py-0.5 text-xs" />
+              <input type="number" min="0" step="0.01" value={splitCash} onChange={(e) => setSplitCash(e.target.value)} className="w-full rounded border border-input-border bg-input-bg px-1.5 py-0.5 text-xs" />
             </div>
             <div>
               <label className="block text-[10px] text-text-muted">Gcash</label>
-              <input type="number" min="0" step="0.01" value={splitGcash} onChange={(e) => { setSplitGcash(e.target.value); setSplitCash(Math.max(0, lineTotal - (Number(e.target.value) || 0)).toFixed(2)); }} className="w-full rounded border border-input-border bg-input-bg px-1.5 py-0.5 text-xs" />
+              <input type="number" min="0" step="0.01" value={splitGcash} onChange={(e) => setSplitGcash(e.target.value)} className="w-full rounded border border-input-border bg-input-bg px-1.5 py-0.5 text-xs" />
+            </div>
+            <div>
+              <label className="block text-[10px] text-text-muted">Bank</label>
+              <input type="number" min="0" step="0.01" value={splitBank} onChange={(e) => setSplitBank(e.target.value)} className="w-full rounded border border-input-border bg-input-bg px-1.5 py-0.5 text-xs" />
             </div>
           </div>
+          {splitBankN > 0 && (
+            <div>
+              <label className="block text-[10px] text-text-muted">Bank / reference (optional)</label>
+              <input type="text" value={bankNote} onChange={(e) => setBankNote(e.target.value)} placeholder="e.g. BPI · ref 12345" className="w-full rounded border border-input-border bg-input-bg px-1.5 py-0.5 text-xs" />
+            </div>
+          )}
+          <p className={`text-[10px] ${overAllocated ? 'text-accent-red' : 'text-text-muted'}`}>
+            {overAllocated
+              ? `Over by ${peso(allocated - lineTotal)} — total is ${peso(lineTotal)}`
+              : `Remaining (unspecified): ${peso(Math.max(0, remainder))} of ${peso(lineTotal)}`}
+          </p>
         </div>
       )}
       <div className="flex gap-1.5">
         <button onClick={onCancel} className="flex-1 rounded bg-white/10 px-2 py-1 text-[10px] font-medium text-text-primary hover:bg-white/15">Cancel</button>
-        <button onClick={handleSave} className="flex-1 rounded bg-btn-primary px-2 py-1 text-[10px] font-medium text-btn-primary-text hover:opacity-90">Save</button>
+        <button onClick={handleSave} disabled={method === 'Split' && overAllocated} className="flex-1 rounded bg-btn-primary px-2 py-1 text-[10px] font-medium text-btn-primary-text hover:opacity-90 disabled:opacity-50">Save</button>
       </div>
     </div>
   );
