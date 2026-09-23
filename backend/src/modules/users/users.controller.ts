@@ -141,6 +141,7 @@ export class UsersController {
       resetPasswordDto.newPassword,
       resetPasswordDto.confirmPassword,
       user.userId,
+      user.role,
     );
 
     return {
@@ -158,7 +159,7 @@ export class UsersController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: RequestUser,
   ) {
-    const result = await this.usersService.restore(id, user.userId);
+    const result = await this.usersService.restore(id, user.userId, user.role);
 
     return {
       success: true,
@@ -174,6 +175,6 @@ export class UsersController {
   @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   @ApiResponse({ status: 404, description: 'User not found' })
   async remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: RequestUser) {
-    await this.usersService.remove(id, user.userId);
+    await this.usersService.remove(id, user.userId, user.role);
   }
 }

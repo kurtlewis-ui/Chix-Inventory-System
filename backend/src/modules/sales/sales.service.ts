@@ -275,6 +275,16 @@ export class SalesService {
     if (sale.status !== SaleStatus.PENDING) {
       throw new BadRequestException('Only pending sales can be edited');
     }
+    // Who may edit a pending sale:
+    //   - Owner: any pending sale.
+    //   - Staff: only their OWN pending sale.
+    //   - Admin (and any other role): NOT ALLOWED. Admin is an approver/
+    //     viewer — it can approve or decline a sale but must never alter its
+    //     contents. This route has no controller-level @Roles (Staff need it),
+    //     so the restriction is enforced here instead.
+    if (actor.role === 'Admin') {
+      throw new ForbiddenException('Admins cannot edit sales — only approve or decline them.');
+    }
     if (actor.role === 'Staff' && sale.staffId !== actor.userId) {
       throw new ForbiddenException('You can only edit your own sales');
     }

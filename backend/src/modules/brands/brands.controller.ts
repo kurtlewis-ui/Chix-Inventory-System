@@ -28,7 +28,7 @@ export class BrandsController {
   constructor(private readonly brandsService: BrandsService) {}
 
   @Post()
-  @Roles('Owner', 'Admin')
+  @Roles('Owner')
   @ApiOperation({ summary: 'Create a new brand' })
   async create(@Body() dto: CreateBrandDto, @CurrentUser() user: RequestUser) {
     const data = await this.brandsService.create(dto, user.userId);
@@ -58,7 +58,7 @@ export class BrandsController {
   }
 
   @Patch(':id')
-  @Roles('Owner', 'Admin')
+  @Roles('Owner')
   @ApiOperation({ summary: 'Update a brand' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -70,7 +70,7 @@ export class BrandsController {
   }
 
   @Post(':id/restore')
-  @Roles('Owner', 'Admin')
+  @Roles('Owner')
   @ApiOperation({ summary: 'Restore an archived brand' })
   async restore(
     @Param('id', ParseUUIDPipe) id: string,
@@ -81,7 +81,7 @@ export class BrandsController {
   }
 
   @Delete(':id')
-  @Roles('Owner', 'Admin')
+  @Roles('Owner')
   @ApiOperation({ summary: 'Archive (soft-delete) a brand' })
   async remove(
     @Param('id', ParseUUIDPipe) id: string,

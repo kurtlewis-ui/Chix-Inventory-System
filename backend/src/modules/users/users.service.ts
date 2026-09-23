@@ -41,11 +41,15 @@ export class UsersService {
       throw new NotFoundException('Role not found');
     }
 
-    // Only an Owner may create Owner accounts. An Admin (or anyone who is not
-    // an Owner) is blocked from minting a new Owner — this closes the
-    // privilege-escalation path where an Admin creates a boss-level account.
-    if (actorRole !== 'Owner' && role.name === 'Owner') {
-      throw new ForbiddenException('Only an Owner can create Owner accounts');
+    // Account-creation authority by role:
+    //   - Owner:  may create any account (Owner, Admin, Staff).
+    //   - Admin:  may create STAFF accounts ONLY. It cannot create another
+    //             Admin (no peer-minting) or an Owner (no privilege escalation).
+    //   - anyone else: blocked (they can't reach this route anyway).
+    // Enforced server-side so the restriction can't be bypassed by calling the
+    // API directly, not just by hiding options in the UI.
+    if (actorRole !== 'Owner' && role.name !== 'Staff') {
+      throw new ForbiddenException('Admins can only create Staff accounts.');
     }
 
     // Verify branch exists if provided
@@ -229,10 +233,13 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    // Only an Owner may edit an existing Owner account. A non-Owner (e.g.
-    // Admin) cannot modify a boss-level account.
-    if (actorRole !== 'Owner' && currentUser.role.name === 'Owner') {
-      throw new ForbiddenException('Only an Owner can edit Owner accounts');
+    // Who a non-Owner (Admin) may EDIT: Staff accounts only. It cannot modify
+    // an Owner (boss-level) or another Admin (peer) — an Owner alone manages
+    // Owner and Admin accounts. This mirrors the create rule (Admin manages
+    // Staff only) and blocks an Admin from tampering with peers/bosses via the
+    // API directly.
+    if (actorRole !== 'Owner' && currentUser.role.name !== 'Staff') {
+      throw new ForbiddenException('Admins can only manage Staff accounts.');
     }
 
     // If changing role, verify new role exists
@@ -245,11 +252,11 @@ export class UsersService {
         throw new NotFoundException('Role not found');
       }
 
-      // Only an Owner may promote anyone TO Owner. This blocks a non-Owner
-      // from escalating themselves or another user to boss level by changing
-      // their role to Owner.
-      if (actorRole !== 'Owner' && newRole.name === 'Owner') {
-        throw new ForbiddenException('Only an Owner can grant the Owner role');
+      // A non-Owner (Admin) may only ever assign the Staff role. This blocks a
+      // non-Owner from promoting anyone TO Admin or Owner (privilege
+      // escalation). Owners may assign any role.
+      if (actorRole !== 'Owner' && newRole.name !== 'Staff') {
+        throw new ForbiddenException('Admins can only assign the Staff role.');
       }
     }
 
@@ -340,6 +347,7 @@ export class UsersService {
     newPassword: string,
     confirmPassword: string,
     resetBy: string,
+    actorRole?: string,
   ) {
     if (newPassword !== confirmPassword) {
       throw new BadRequestException('New passwords do not match');
@@ -358,6 +366,12 @@ export class UsersService {
 
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    // A non-Owner (Admin) may only reset Staff passwords — never an Owner's or
+    // a peer Admin's. Owners may reset anyone's.
+    if (actorRole !== 'Owner' && user.role.name !== 'Staff') {
+      throw new ForbiddenException('Admins can only reset Staff passwords.');
     }
 
     // Hash and store the new password
@@ -393,7 +407,7 @@ export class UsersService {
     return { message: 'Password updated successfully' };
   }
 
-  async remove(id: string, deletedBy: string) {
+  async remove(id: string, deletedBy: string, actorRole?: string) {
     // Get user
     const user = await this.prisma.user.findFirst({
       where: {
@@ -407,6 +421,12 @@ export class UsersService {
 
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    // A non-Owner (Admin) may only delete Staff accounts — never an Owner or a
+    // peer Admin. Owners may delete anyone (subject to the self-delete guard).
+    if (actorRole !== 'Owner' && user.role.name !== 'Staff') {
+      throw new ForbiddenException('Admins can only delete Staff accounts.');
     }
 
     // Prevent self-deletion
@@ -488,13 +508,20 @@ export class UsersService {
     };
   }
 
-  async restore(id: string, restoredBy: string) {
+  async restore(id: string, restoredBy: string, actorRole?: string) {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: { not: null } },
+      include: { role: true },
     });
 
     if (!user) {
       throw new NotFoundException('Archived user not found');
+    }
+
+    // A non-Owner (Admin) may only restore Staff accounts — never an Owner or
+    // a peer Admin. Owners may restore anyone.
+    if (actorRole !== 'Owner' && user.role.name !== 'Staff') {
+      throw new ForbiddenException('Admins can only restore Staff accounts.');
     }
 
     // Block restore if the email is now used by an active account.
