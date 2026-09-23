@@ -284,7 +284,10 @@ export class AuthService {
       },
     });
 
-    // Invalidate all sessions except current (force re-login)
+    // Invalidate ALL of this user's sessions (including the current one) so a
+    // password change forces a fresh login everywhere — matching the frontend,
+    // which redirects to /login after a successful change. (The returned
+    // message and the client both say "please log in again".)
     await this.prisma.session.deleteMany({
       where: {
         userId,
