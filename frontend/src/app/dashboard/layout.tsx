@@ -150,7 +150,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   if (!mounted) {
     return (
-      <main className="flex min-h-screen items-center justify-center" style={{ background: '#0a0f1a' }}>
+      <main className="flex min-h-screen items-center justify-center" style={{ background: '#0f0f0f' }}>
         <div className="flex items-center gap-3">
           <svg className="h-5 w-5 animate-spin text-white" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -167,7 +167,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#0a0f1a' }}>
+    <div className="min-h-screen" style={{ background: '#0f0f0f' }}>
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -212,7 +212,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         : 'text-nav-text hover:text-white hover:bg-white/5 border-l-[3px] border-transparent'
                     }`}
                   >
-                    <span className={active ? 'text-white' : 'text-[#666666]'}>{item.icon}</span>
+                    <span className={active ? 'text-white' : 'text-nav-text'}>{item.icon}</span>
                     <span className="flex-1 text-left">{item.label}</span>
                     <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
@@ -225,7 +225,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         : 'text-nav-text hover:text-white hover:bg-white/5 border-l-[3px] border-transparent'
                     }`}
                   >
-                    <span className={active ? 'text-white' : 'text-[#666666]'}>{item.icon}</span>
+                    <span className={active ? 'text-white' : 'text-nav-text'}>{item.icon}</span>
                     {item.label}
                   </Link>
                 )}
@@ -241,9 +241,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                           key={sub.href}
                           href={sub.href}
                           className={`block px-3 py-2 text-sm rounded-md transition-colors ${
-                            subActive
+                            
                               ? 'text-white bg-white/5'
-                              : 'text-[#666666] hover:text-white hover:bg-white/5'
+                              : 'text-nav-text hover:text-white hover:bg-white/5'
                           }`}
                         >
                           {sub.label}
@@ -272,7 +272,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <p className="text-sm font-medium text-white truncate">
                 {user?.firstName} {user?.lastName}
               </p>
-              <p className="text-[11px] text-[#666666] truncate">{user?.role?.name}</p>
+              <p className="text-[11px] text-nav-text truncate">{user?.role?.name}</p>
             </div>
             {/* Theme toggle — in-flow so it never overlaps the name/role */}
             <button
@@ -310,7 +310,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Main content area — offset by sidebar width, applies theme */}
       <div className={`lg:ml-[240px] flex-1 flex flex-col min-h-screen content-transition ${contentTheme === 'light' ? 'content-light' : ''}`}>
         {/* Top bar (mobile only) */}
-        <header className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 bg-[#0b1220]/95 backdrop-blur-md border-b border-nav-border lg:hidden">
+        <header className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 bg-[#141414]/95 backdrop-blur-md border-b border-nav-border lg:hidden">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="flex items-center rounded-lg p-2 text-[#999999] hover:text-white hover:bg-white/5 transition-colors"

@@ -115,7 +115,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#0a0f1a' }}>
+    <div className="min-h-screen" style={{ background: '#0f0f0f' }}>
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -151,7 +151,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
                     : 'text-nav-text hover:text-white hover:bg-white/5 border-l-[3px] border-transparent'
                 }`}
               >
-                <span className={active ? 'text-white' : 'text-[#666666]'}>{item.icon}</span>
+                <span className={active ? 'text-white' : 'text-nav-text'}>{item.icon}</span>
                 {item.label}
               </Link>
             );
@@ -174,7 +174,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
                 {user?.firstName} {user?.lastName}
               </p>
               {user?.branch?.name && (
-                <p className="text-[11px] text-[#666666] truncate">{user.branch.name}</p>
+                <p className="text-[11px] text-nav-text truncate">{user.branch.name}</p>
               )}
             </div>
             {/* Theme toggle — in-flow so it never overlaps the name/branch */}
@@ -211,7 +211,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Mobile header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-[#0b1220]/95 backdrop-blur-md border-b border-nav-border">
+      <header className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-[#141414]/95 backdrop-blur-md border-b border-nav-border">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="p-2 rounded-lg text-[#999999] hover:text-white hover:bg-white/5 transition-colors"

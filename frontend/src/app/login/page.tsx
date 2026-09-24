@@ -63,7 +63,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10" style={{ background: '#0a0f1a' }}>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10" style={{ background: '#0f0f0f' }}>
       {/* Subtle radial glow */}
       <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-white/[0.03] blur-3xl" />
 
@@ -80,7 +80,7 @@ export default function LoginPage() {
         </div>
 
         {/* Card */}
-        <div className="w-full rounded-2xl bg-[#111a2e]/95 border border-[#243350] p-8 shadow-xl shadow-black/40">
+        <div className="w-full rounded-2xl bg-[#1a1a1a]/95 border border-[#333333] p-8 shadow-xl shadow-black/40">
           <div className="text-center mb-6">
             <h1 className="text-lg font-bold text-white">Welcome Back</h1>
             <p className="text-sm text-[#666666] mt-1">Sign in to your account</p>
@@ -102,7 +102,7 @@ export default function LoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-[#243350] bg-[#0f1626] pl-11 pr-4 py-3 text-white placeholder-[#667089] outline-none transition-all focus:border-white/40 focus:ring-2 focus:ring-white/10"
+                  className="w-full rounded-xl border border-[#333333] bg-[#1a1a1a] pl-11 pr-4 py-3 text-white placeholder-[#666666] outline-none transition-all focus:border-white/40 focus:ring-2 focus:ring-white/10"
                   placeholder="you@example.com"
                 />
               </div>
@@ -123,7 +123,7 @@ export default function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl border border-[#243350] bg-[#0f1626] pl-11 pr-12 py-3 text-white placeholder-[#667089] outline-none transition-all focus:border-white/40 focus:ring-2 focus:ring-white/10"
+                  className="w-full rounded-xl border border-[#333333] bg-[#1a1a1a] pl-11 pr-12 py-3 text-white placeholder-[#666666] outline-none transition-all focus:border-white/40 focus:ring-2 focus:ring-white/10"
                   placeholder="Enter your password"
                 />
                 <button
