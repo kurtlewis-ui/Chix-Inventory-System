@@ -28,11 +28,27 @@ body {
    surfaces keep their existing Tailwind fallbacks.
    ---------------------------------------------------------------------- */
 :root {
-  /* Soft hairline for card edges and table row dividers (was #2a2a2a). */
-  --content-card-border: rgba(255, 255, 255, 0.08);
-  /* A slightly more visible variant for input fields, which need to read as
-     defined controls. */
-  --content-input-border: rgba(255, 255, 255, 0.14);
+  /* ---- Navy dark theme -------------------------------------------------
+     Professional deep navy-blue surfaces instead of flat black. Kept dark
+     enough to still read as a "dark" theme, but with a cool blue depth.
+     Primary buttons stay WHITE (see below) for crisp contrast. */
+  --content-page-bg: #0a0f1a;          /* near-black navy — the app canvas */
+  --content-card-bg: #111a2e;          /* slate-navy panels/cards */
+  --content-table-header: #0f1830;     /* a step off the card for table heads */
+  --content-table-header-text: #9aa6bd;
+  --content-surface-muted: #16223b;    /* chips / hover surfaces */
+  --content-input-bg: #0f1626;         /* form fields sit just below cards */
+  /* Text tuned for navy surfaces (soft blue-whites, not pure gray). */
+  --content-text-primary: #e8ecf4;
+  --content-text-secondary: #9aa6bd;
+  --content-text-muted: #6b7690;
+  --content-text-link: #cfd7e6;
+  /* Buttons kept WHITE in dark mode (unchanged brand contrast). */
+  --content-btn-primary: #ffffff;
+  --content-btn-primary-text: #0a0f1a;
+  /* Faint cool-blue hairlines instead of white ones. */
+  --content-card-border: rgba(130, 160, 220, 0.12);
+  --content-input-border: rgba(130, 160, 220, 0.18);
 }
 
 /* ----------------------------------------------------------------------
@@ -204,7 +220,7 @@ select {
    breathing room where allowed; it's harmless where ignored (Safari/mobile). */
 select option,
 select optgroup {
-  background-color: var(--content-input-bg, #1a1a1a);
+  background-color: var(--content-input-bg, #0f1626);
   color: var(--content-text-primary, #f0f0f0);
   padding: 10px 14px;
   line-height: 1.9;
@@ -218,7 +234,7 @@ select optgroup {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--content-page-bg, #0f0f0f);
+  background: var(--content-page-bg, #0a0f1a);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -387,14 +403,14 @@ select optgroup {
    .glass-strong — for true floating chrome only (sidebars, slide-over panel);
                    a touch more translucent since it overlays scrolling content. */
 .glass {
-  background-color: color-mix(in srgb, var(--content-card-bg, #1a1a1a) 92%, transparent);
+  background-color: color-mix(in srgb, var(--content-card-bg, #111a2e) 92%, transparent);
   backdrop-filter: blur(6px) saturate(110%);
   -webkit-backdrop-filter: blur(6px) saturate(110%);
   border: 1px solid color-mix(in srgb, var(--content-card-border, #2a2a2a) 80%, transparent);
 }
 
 .glass-strong {
-  background-color: color-mix(in srgb, var(--content-card-bg, #1a1a1a) 88%, transparent);
+  background-color: color-mix(in srgb, var(--content-card-bg, #111a2e) 88%, transparent);
   backdrop-filter: blur(10px) saturate(115%);
   -webkit-backdrop-filter: blur(10px) saturate(115%);
   border: 1px solid color-mix(in srgb, var(--content-card-border, #2a2a2a) 80%, transparent);
@@ -405,7 +421,7 @@ select optgroup {
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass,
   .glass-strong {
-    background-color: color-mix(in srgb, var(--content-card-bg, #1a1a1a) 96%, transparent);
+    background-color: color-mix(in srgb, var(--content-card-bg, #111a2e) 96%, transparent);
   }
 }
 
@@ -418,7 +434,7 @@ select optgroup {
 .glass-select {
   /* Nearly solid so the selected value stays crisp over busy pages — just a
      hint of blur/sheen, not a see-through panel. */
-  background-color: color-mix(in srgb, var(--content-input-bg, #1a1a1a) 92%, transparent);
+  background-color: color-mix(in srgb, var(--content-input-bg, #0f1626) 92%, transparent);
   backdrop-filter: blur(4px) saturate(110%);
   -webkit-backdrop-filter: blur(4px) saturate(110%);
   border: 1px solid color-mix(in srgb, var(--content-input-border, #333333) 85%, transparent);
@@ -494,7 +510,7 @@ select optgroup {
 /* Solid fallback where backdrop-filter isn't supported. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass-select {
-    background-color: color-mix(in srgb, var(--content-input-bg, #1a1a1a) 92%, transparent);
+    background-color: color-mix(in srgb, var(--content-input-bg, #0f1626) 92%, transparent);
   }
 }
 

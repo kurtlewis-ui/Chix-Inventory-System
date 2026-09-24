@@ -13,9 +13,11 @@ const config: Config = {
         'table-header': 'var(--content-table-header, #1e1e1e)',
         'table-header-text': 'var(--content-table-header-text, #c0c0c0)',
         // Nav — dark charcoal sidebar (never changes)
-        'nav-bg': '#141414',
-        'nav-border': '#2a2a2a',
-        'nav-text': '#999999',
+        // Side navigation — deep navy blue (professional). A touch darker than
+        // the cards so the sidebar reads as its own surface.
+        'nav-bg': '#0b1220',
+        'nav-border': 'rgba(130, 160, 220, 0.12)',
+        'nav-text': '#8792a8',
         'nav-active': '#ffffff',
         // Text colors — adapt to content theme
         'text-primary': 'var(--content-text-primary, #f0f0f0)',
