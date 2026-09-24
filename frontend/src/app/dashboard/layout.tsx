@@ -186,9 +186,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       >
         {/* Logo */}
         <div className="flex items-center gap-4 px-5 py-5 border-b border-nav-border">
-          <div className="logo-shimmer rounded-full ring-2 ring-white">
-            <img src="/logo.svg" alt="CHX Inventory System" className="h-11 w-11 object-contain" />
-          </div>
+          <img src="/logo.svg" alt="CHX Inventory System" className="h-11 w-11 object-contain" />
           <p className="text-base font-bold text-white">CHX Inventory System</p>
         </div>
 
@@ -319,7 +317,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
           <div className="flex items-center gap-4">
-            <img src="/logo.svg" alt="CHX Inventory System" className="h-10 w-10 rounded-full object-contain ring-2 ring-white" />
+            <img src="/logo.svg" alt="CHX Inventory System" className="h-10 w-10 object-contain" />
             <span className="text-base font-bold text-white">CHX Inventory System</span>
           </div>
           <div className="w-9" />

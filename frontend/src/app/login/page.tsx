@@ -68,15 +68,12 @@ export default function LoginPage() {
       <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-white/[0.03] blur-3xl" />
 
       <div className="relative flex w-full max-w-[420px] flex-col items-center">
-        {/* Circle logo with a solid white ring. The ring is drawn with CSS
-            (ring-4 + ring-white) so it stays crisp/vector-smooth at any size —
-            not baked into the image, so it never looks pixelated. The image
-            keeps its own circular edge (object-contain, no re-clip). */}
-        <div className="mb-10 logo-shimmer rounded-full ring-4 ring-white ring-offset-0 shadow-2xl shadow-black/50">
+        {/* Plain wordmark logo — no circle/ring/shimmer. */}
+        <div className="mb-10">
           <img
             src="/logo.svg"
             alt="CHX Inventory System"
-            className="h-[180px] w-[180px] sm:h-[240px] sm:w-[240px] object-contain"
+            className="h-[140px] w-[140px] sm:h-[180px] sm:w-[180px] object-contain"
           />
         </div>
 
@@ -171,7 +168,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="mt-6 text-[11px] text-[#666666] tracking-wider uppercase">
-          Daily Smokz
+          Inventory System
         </p>
       </div>
     </main>
