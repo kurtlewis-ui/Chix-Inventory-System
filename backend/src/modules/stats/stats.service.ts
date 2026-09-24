@@ -304,6 +304,78 @@ export class StatsService {
     };
   }
 
+  /**
+   * Owner+Admin sales summary over APPROVED sales for an optional branch and
+   * PH business-day date range. This is the COST-FREE counterpart to
+   * profitSummary: it deliberately computes NO cost-derived figures (no
+   * Capital/COGS, Gross Profit, Net Profit or Margin), so it is safe for the
+   * Admin dashboard where cost is confidential. It never reads SaleItem.costPrice.
+   *
+   * Definitions (all selling-price / expense / disposal figures only):
+   *   totalSales      = Σ SaleItem.subTotal              (NET, already after discount)
+   *   totalDiscount   = Σ SaleItem.discount              (display only)
+   *   totalGrossSales = totalSales + totalDiscount       (before discount)
+   *   totalExpenses   = Σ Expense.amount   (APPROVED, same range/branch)
+   *   disposalLosses  = Σ Disposal.value   (APPROVED, same range/branch)
+   *   net             = totalSales − totalExpenses − disposalLosses
+   *
+   * Date filtering mirrors profitSummary/the Sales Records list: APPROVED sales
+   * over the PH business-day window, scoped by branch (branchId omitted = all shops).
+   */
+  async salesSummary(
+    branchId: string | undefined,
+    startDate: string | undefined,
+    endDate: string | undefined,
+  ) {
+    const dateRange = businessDayRange(startDate, endDate);
+    const hasDateFilter = dateRange.gte !== undefined || dateRange.lt !== undefined;
+
+    const saleWhere = {
+      status: SaleStatus.APPROVED,
+      ...(branchId ? { branchId } : {}),
+      ...(hasDateFilter ? { createdAt: dateRange } : {}),
+    } as const;
+
+    const [itemAgg, expenseAgg, disposalAgg] = await Promise.all([
+      this.prisma.saleItem.aggregate({
+        where: { sale: saleWhere },
+        _sum: { subTotal: true, discount: true },
+      }),
+      this.prisma.expense.aggregate({
+        where: {
+          status: ExpenseStatus.APPROVED,
+          ...(branchId ? { branchId } : {}),
+          ...(hasDateFilter ? { createdAt: dateRange } : {}),
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.disposal.aggregate({
+        where: {
+          status: DisposalStatus.APPROVED,
+          ...(branchId ? { branchId } : {}),
+          ...(hasDateFilter ? { createdAt: dateRange } : {}),
+        },
+        _sum: { value: true },
+      }),
+    ]);
+
+    const totalSales = Number(itemAgg._sum.subTotal ?? 0);
+    const totalDiscount = Number(itemAgg._sum.discount ?? 0);
+    const totalGrossSales = totalSales + totalDiscount;
+    const totalExpenses = Number(expenseAgg._sum.amount ?? 0);
+    const disposalLosses = Number(disposalAgg._sum.value ?? 0);
+    const net = totalSales - totalExpenses - disposalLosses;
+
+    return {
+      totalGrossSales,
+      totalSales,
+      totalDiscount,
+      totalExpenses,
+      disposalLosses,
+      net,
+    };
+  }
+
   private async resolveBranchForActor(actor: RequestUser, branchId?: string) {
     if (actor.role === 'Staff') {
       const me = await this.prisma.user.findUnique({
