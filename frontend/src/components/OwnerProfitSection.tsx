@@ -219,15 +219,15 @@ function ProfitContent() {
         </div>
         <div className="px-1 min-w-0">
           <p className="text-xs text-text-muted uppercase">Disposal Losses</p>
-          <p className="text-base sm:text-xl font-bold tabular-nums leading-tight break-words" style={{ color: '#f59e0b' }}>{peso(metrics.disposalLosses)}</p>
+          <p className="text-base sm:text-xl font-bold tabular-nums leading-tight break-words" style={{ color: '#f97316' }}>{peso(metrics.disposalLosses)}</p>
         </div>
         <div className="px-1 min-w-0">
           <p className="text-xs text-text-muted uppercase">Total Discount</p>
-          <p className="text-base sm:text-xl font-bold tabular-nums leading-tight break-words" style={{ color: '#ec4899' }}>{peso(metrics.totalDiscount)}</p>
+          <p className="text-base sm:text-xl font-bold tabular-nums leading-tight break-words" style={{ color: '#f59e0b' }}>{peso(metrics.totalDiscount)}</p>
         </div>
         <div className="px-1 min-w-0">
           <p className="text-xs text-text-muted uppercase">Net Profit</p>
-          <p className="text-base sm:text-xl font-bold tabular-nums leading-tight break-words" style={{ color: metrics.netProfit >= 0 ? '#a78bfa' : '#ef4444' }}>{peso(metrics.netProfit)}</p>
+          <p className="text-base sm:text-xl font-bold tabular-nums leading-tight break-words" style={{ color: metrics.netProfit >= 0 ? '#3b82f6' : '#ef4444' }}>{peso(metrics.netProfit)}</p>
         </div>
         <div className="px-1 min-w-0">
           <p className="text-xs text-text-muted uppercase">Margin</p>

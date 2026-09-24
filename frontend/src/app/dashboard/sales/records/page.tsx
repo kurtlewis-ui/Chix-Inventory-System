@@ -109,23 +109,23 @@ export default function SalesRecordsPage() {
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
               <div>
                 <p className="text-xs text-text-secondary">Total Gross Sales</p>
-                <p className="text-lg font-bold text-accent-green tabular-nums break-words">{peso(branchSummary.totalGrossSales)}</p>
+                <p className="text-lg font-bold tabular-nums break-words" style={{ color: '#10b981' }}>{peso(branchSummary.totalGrossSales)}</p>
               </div>
               <div>
                 <p className="text-xs text-text-secondary">Total Discount</p>
-                <p className="text-lg font-bold text-accent-blue tabular-nums break-words">{peso(branchSummary.totalDiscount)}</p>
+                <p className="text-lg font-bold tabular-nums break-words" style={{ color: '#f59e0b' }}>{peso(branchSummary.totalDiscount)}</p>
               </div>
               <div>
                 <p className="text-xs text-text-secondary">Total Expenses</p>
-                <p className="text-lg font-bold text-accent-red tabular-nums break-words">{peso(branchSummary.totalExpenses)}</p>
+                <p className="text-lg font-bold tabular-nums break-words" style={{ color: '#ef4444' }}>{peso(branchSummary.totalExpenses)}</p>
               </div>
               <div>
                 <p className="text-xs text-text-secondary">Total Disposals</p>
-                <p className="text-lg font-bold text-accent-orange tabular-nums break-words">{peso(branchSummary.totalDisposals)}</p>
+                <p className="text-lg font-bold tabular-nums break-words" style={{ color: '#f97316' }}>{peso(branchSummary.totalDisposals)}</p>
               </div>
               <div>
                 <p className="text-xs text-text-secondary">Net</p>
-                <p className="text-lg font-bold text-text-primary tabular-nums break-words">{peso(branchSummary.net)}</p>
+                <p className="text-lg font-bold tabular-nums break-words" style={{ color: branchSummary.net >= 0 ? '#3b82f6' : '#ef4444' }}>{peso(branchSummary.net)}</p>
               </div>
             </div>
           </div>
