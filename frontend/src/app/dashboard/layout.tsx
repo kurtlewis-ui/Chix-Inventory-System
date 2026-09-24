@@ -150,7 +150,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   if (!mounted) {
     return (
-      <main className="flex min-h-screen items-center justify-center" style={{ background: '#0f0f0f' }}>
+      <main className="flex min-h-screen items-center justify-center" style={{ background: '#0a0f1a' }}>
         <div className="flex items-center gap-3">
           <svg className="h-5 w-5 animate-spin text-white" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -167,7 +167,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#0f0f0f' }}>
+    <div className="min-h-screen" style={{ background: '#0a0f1a' }}>
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -310,7 +310,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Main content area — offset by sidebar width, applies theme */}
       <div className={`lg:ml-[240px] flex-1 flex flex-col min-h-screen content-transition ${contentTheme === 'light' ? 'content-light' : ''}`}>
         {/* Top bar (mobile only) */}
-        <header className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 bg-[#141414]/95 backdrop-blur-md border-b border-[#2a2a2a] lg:hidden">
+        <header className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 bg-[#0b1220]/95 backdrop-blur-md border-b border-nav-border lg:hidden">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="flex items-center rounded-lg p-2 text-[#999999] hover:text-white hover:bg-white/5 transition-colors"

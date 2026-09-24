@@ -115,7 +115,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#0f0f0f' }}>
+    <div className="min-h-screen" style={{ background: '#0a0f1a' }}>
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -211,7 +211,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Mobile header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-[#141414]/95 backdrop-blur-md border-b border-[#2a2a2a]">
+      <header className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-[#0b1220]/95 backdrop-blur-md border-b border-nav-border">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="p-2 rounded-lg text-[#999999] hover:text-white hover:bg-white/5 transition-colors"
