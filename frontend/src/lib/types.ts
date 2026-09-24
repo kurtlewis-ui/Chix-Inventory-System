@@ -257,6 +257,18 @@ export interface BranchSummary {
   net: number;
 }
 
+// Owner+Admin sales summary — the COST-FREE counterpart to ProfitSummary.
+// Contains only selling-side figures (no Capital/COGS/Profit/Margin), so it's
+// safe to show to Admin. Backed by GET /stats/sales-summary.
+export interface SalesSummaryTotals {
+  totalGrossSales: number; // before discount (= totalSales + totalDiscount)
+  totalSales: number; // NET sales (after discount)
+  totalDiscount: number; // Σ per-item discount (display only)
+  totalExpenses: number;
+  disposalLosses: number;
+  net: number; // totalSales − totalExpenses − disposalLosses
+}
+
 // Owner-only Profit & Loss (server-computed using confidential cost prices).
 export interface ProfitSummary {
   grossSales: number; // before discount (= revenue + totalDiscount)

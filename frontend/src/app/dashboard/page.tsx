@@ -8,6 +8,7 @@ import { useDashboardStats, useSalesOverview, useTopProducts, useBranches, useDi
 import { useThemeStore } from '@/lib/theme';
 import { useAuthStore } from '@/lib/store';
 import { OwnerProfitSection } from '@/components/OwnerProfitSection';
+import { AdminSummarySection } from '@/components/AdminSummarySection';
 import { useToast } from '@/components/Toast';
 import { Select } from '@/components/Select';
 
@@ -145,6 +146,11 @@ function OwnerDashboard({ isOwner }: { isOwner: boolean }) {
           it is never rendered for Admin (the /stats/profit-summary endpoint is
           Owner-only on the backend too). */}
       {isOwner && <OwnerProfitSection />}
+
+      {/* Admin's cost-free Sales Summary (Total Sales, Discount, Expenses,
+          Disposal Losses, Net). Self-gates to the Admin role and is backed by
+          the /stats/sales-summary endpoint, which computes no cost figures. */}
+      {!isOwner && <AdminSummarySection />}
 
       {/* NOTE: The old "Revenue" summary box was removed here. It only ever
           showed to the Owner (the Profit & Loss section is Owner-only),

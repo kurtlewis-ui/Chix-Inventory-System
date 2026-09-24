@@ -63,6 +63,26 @@ export class StatsController {
     return { success: true, data };
   }
 
+  // Owner + Admin. The COST-FREE sales summary: Total Sales, Total Discount,
+  // Total Expenses, Disposal Losses and Net over an optional branch + date
+  // range. Unlike profit-summary it exposes NO cost-derived figures (no
+  // Capital/Gross Profit/Net Profit/Margin), so Admin may safely read it.
+  @Get('sales-summary')
+  @Roles('Owner', 'Admin')
+  @ApiOperation({ summary: 'Owner/Admin sales summary (Sales, Discount, Expenses, Disposal Losses, Net) — no cost' })
+  async salesSummary(
+    @Query('branchId') branchId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const data = await this.statsService.salesSummary(
+      branchId || undefined,
+      startDate || undefined,
+      endDate || undefined,
+    );
+    return { success: true, data };
+  }
+
   // No @Roles here: Staff need this for their own daily report. The service
   // forces a Staff caller to their own branch, so they can't read another
   // branch's numbers.

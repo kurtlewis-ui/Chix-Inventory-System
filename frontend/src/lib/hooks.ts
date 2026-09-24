@@ -26,6 +26,7 @@ import type {
   PaymentSplit,
   Product,
   ProfitSummary,
+  SalesSummaryTotals,
   RoleOption,
   Sale,
   SalesOverviewPoint,
@@ -887,6 +888,23 @@ export function useProfitSummary(params?: { branchId?: string; startDate?: strin
     queryKey: ['stats', 'profit-summary', { branchId, startDate, endDate }],
     queryFn: () =>
       getData<ProfitSummary>('/stats/profit-summary', {
+        branchId: branchId || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      }),
+  });
+}
+
+// Cost-free sales summary (Owner + Admin). Same optional branch + date range as
+// useProfitSummary, but returns only Sales/Discount/Expenses/Disposal Losses/Net.
+export function useSalesSummary(params?: { branchId?: string; startDate?: string; endDate?: string }) {
+  const branchId = params?.branchId;
+  const startDate = params?.startDate;
+  const endDate = params?.endDate;
+  return useQuery({
+    queryKey: ['stats', 'sales-summary', { branchId, startDate, endDate }],
+    queryFn: () =>
+      getData<SalesSummaryTotals>('/stats/sales-summary', {
         branchId: branchId || undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
