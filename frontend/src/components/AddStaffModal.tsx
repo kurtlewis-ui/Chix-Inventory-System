@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Eye, EyeOff } from 'lucide-react';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { Select } from '@/components/Select';
 import { useUnsavedGuard } from '@/lib/useUnsavedGuard';
@@ -34,6 +35,8 @@ export function AddStaffModal({ open, onClose, roles, branches }: AddStaffModalP
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  // One toggle reveals both password fields (matches the app's other forms).
+  const [showPassword, setShowPassword] = useState(false);
   const [roleId, setRoleId] = useState('');
   const [branchId, setBranchId] = useState<string>('');
   const [formError, setFormError] = useState<string | null>(null);
@@ -81,6 +84,7 @@ export function AddStaffModal({ open, onClose, roles, branches }: AddStaffModalP
     setEmail('');
     setPassword('');
     setConfirmPassword('');
+    setShowPassword(false);
     setRoleId('');
     setBranchId('');
     setFormError(null);
@@ -186,24 +190,48 @@ export function AddStaffModal({ open, onClose, roles, branches }: AddStaffModalP
 
         <div>
           <label className="mb-1 block text-sm font-medium text-text-secondary">Password</label>
-          <input
-            type="password"
-            className={inputClass}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              className={`${inputClass} pr-10`}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((s) => !s)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              title={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
         </div>
 
         <div>
           <label className="mb-1 block text-sm font-medium text-text-secondary">Confirm password</label>
-          <input
-            type="password"
-            className={inputClass}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              className={`${inputClass} pr-10`}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((s) => !s)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              title={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
         </div>
 
         <p className="text-xs text-text-muted">
