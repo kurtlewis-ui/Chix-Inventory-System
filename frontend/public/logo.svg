@@ -1,4 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="CHX Inventory System">
-  <text x="120" y="128" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-size="76" font-weight="800" letter-spacing="2" fill="#ffffff">CHX</text>
-  <text x="120" y="162" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="600" letter-spacing="3" fill="#ffffff">INVENTORY SYSTEM</text>
+  <!-- Plain, professional circular mark: a solid deep disc, a single crisp
+       hairline ring, and a clean CHX wordmark. No gradients/underline clutter. -->
+  <circle cx="120" cy="120" r="116" fill="#101828"/>
+  <circle cx="120" cy="120" r="116" fill="none" stroke="#ffffff" stroke-opacity="0.85" stroke-width="3"/>
+  <text x="120" y="146" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-size="82" font-weight="800" letter-spacing="2" fill="#ffffff">CHX</text>
 </svg>
