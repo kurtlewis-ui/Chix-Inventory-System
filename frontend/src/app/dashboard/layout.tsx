@@ -241,7 +241,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                           key={sub.href}
                           href={sub.href}
                           className={`block px-3 py-2 text-sm rounded-md transition-colors ${
-                            
+                            subActive
                               ? 'text-white bg-white/5'
                               : 'text-nav-text hover:text-white hover:bg-white/5'
                           }`}
