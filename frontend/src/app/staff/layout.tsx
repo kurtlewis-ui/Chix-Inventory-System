@@ -131,7 +131,9 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
       }`}>
         {/* Logo */}
         <div className="flex items-center gap-4 px-5 py-5 border-b border-nav-border">
-          <img src="/logo.svg" alt="CHX Inventory System" className="h-11 w-11 object-contain" />
+          <div className="logo-shimmer rounded-full">
+            <img src="/logo.svg" alt="CHX Inventory System" className="h-11 w-11 object-contain" />
+          </div>
           <p className="text-base font-bold text-white">CHX Inventory System</p>
         </div>
 
@@ -218,7 +220,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
           {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
         <div className="flex items-center gap-3.5">
-          <img src="/logo.svg" alt="CHX Inventory System" className="h-8 w-8 object-contain" />
+          <img src="/logo.svg" alt="CHX Inventory System" className="h-8 w-8 rounded-full object-contain" />
           <span className="text-sm font-bold text-white">CHX Inventory System</span>
         </div>
         <div className="w-9" />
