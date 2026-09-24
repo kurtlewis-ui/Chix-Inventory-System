@@ -30,8 +30,11 @@ function peso(n: number) {
 // Dark uses slightly brighter/saturated tones so they pop on the near-black
 // canvas; light uses the softer originals. Same hue order so a series keeps a
 // consistent color between themes.
-const DONUT_COLORS_DARK = ['#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171', '#22d3ee', '#f472b6', '#a3e635'];
-const DONUT_COLORS_LIGHT = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#84cc16'];
+// Chart palettes — amber-led and intentionally GREEN-FREE (green now reads as
+// a "positive/sales" semantic elsewhere, so charts use a distinct set). Same
+// hue order in both themes; dark uses slightly brighter tones for the black bg.
+const DONUT_COLORS_DARK = ['#fbbf24', '#60a5fa', '#a78bfa', '#22d3ee', '#f472b6', '#f87171', '#e879f9', '#fb923c'];
+const DONUT_COLORS_LIGHT = ['#f59e0b', '#3b82f6', '#8b5cf6', '#06b6d4', '#ec4899', '#ef4444', '#d946ef', '#f97316'];
 
 export default function DashboardPage() {
   const currentRole = useAuthStore((s) => s.user?.role?.name);
@@ -136,10 +139,10 @@ function OwnerDashboard({ isOwner }: { isOwner: boolean }) {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard href="/dashboard/shops" icon={<Store size={24} />} value={v(stats?.shops)} label="Shops" accentColor="#3b82f6" />
+        <StatsCard href="/dashboard/shops" icon={<Store size={24} />} value={v(stats?.shops)} label="Shops" accentColor="#f59e0b" />
         <StatsCard href="/dashboard/products" icon={<Package size={24} />} value={v(stats?.products)} label="Products" subtitle={`${v(stats?.brands)} brands`} accentColor="#10b981" />
-        <StatsCard href="/dashboard/sales/pending" icon={<PhilippinePeso size={24} />} value={v(stats?.pendingSales)} label="Pending Sales" subtitle={`${v(stats?.approvedSales)} Approved`} accentColor="#f59e0b" />
-        <StatsCard href="/dashboard/users" icon={<Users size={24} />} value={v(stats?.staff)} label="Staff" subtitle={`${v(stats?.admins)} Admins`} accentColor="#a78bfa" />
+        <StatsCard href="/dashboard/sales/pending" icon={<PhilippinePeso size={24} />} value={v(stats?.pendingSales)} label="Pending Sales" subtitle={`${v(stats?.approvedSales)} Approved`} accentColor="#8b5cf6" />
+        <StatsCard href="/dashboard/users" icon={<Users size={24} />} value={v(stats?.staff)} label="Staff" subtitle={`${v(stats?.admins)} Admins`} accentColor="#06b6d4" />
       </div>
 
       {/* Owner-only Profit & Loss section — uses confidential cost prices, so

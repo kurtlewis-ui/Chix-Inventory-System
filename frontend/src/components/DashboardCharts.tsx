@@ -38,13 +38,13 @@ const tooltipStyle = (isDark: boolean, border?: string) => ({
 });
 
 export function SalesOverviewChart({ data, isDark }: { data: { label: string; total: number }[]; isDark: boolean }) {
-  // Branded emerald in both themes (brighter tone in dark so it pops on black).
-  const lineColor = isDark ? '#34d399' : '#10b981';
+  // Amber in both themes (brighter tone in dark so it pops on black).
+  const lineColor = isDark ? '#fbbf24' : '#f59e0b';
   return (
     <ResponsiveContainer width="100%" height={288}>
       <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-        {/* Branded emerald line + gradient fill in both themes (dark used to be
-            a flat white line). Softer gridlines keep the focus on the trend. */}
+        {/* Amber line + gradient fill in both themes. Softer gridlines keep the
+            focus on the trend. */}
         <defs>
           <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor={lineColor} stopOpacity={0.35} />
@@ -53,8 +53,8 @@ export function SalesOverviewChart({ data, isDark }: { data: { label: string; to
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)'} />
-        <XAxis dataKey="label" tick={{ fontSize: 11, fill: isDark ? '#666666' : '#888888' }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: isDark ? '#666666' : '#888888' }} tickFormatter={(n: any) => peso(Number(n))} width={70} axisLine={false} tickLine={false} />
+        <XAxis dataKey="label" tick={{ fontSize: 11, fill: isDark ? '#8b8b8b' : '#888888' }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fontSize: 11, fill: isDark ? '#8b8b8b' : '#888888' }} tickFormatter={(n: any) => peso(Number(n))} width={70} axisLine={false} tickLine={false} />
         <Tooltip formatter={(val: any) => peso(Number(val))} contentStyle={tooltipStyle(isDark)} cursor={{ stroke: lineColor, strokeWidth: 1, strokeDasharray: '4 4' }} />
         <Area type="monotone" dataKey="total" stroke={lineColor} fill="url(#salesGrad)" strokeWidth={2.5} name="Sales" dot={false} activeDot={{ r: 5, fill: lineColor, stroke: isDark ? '#0f0f0f' : '#ffffff', strokeWidth: 2 }} />
       </AreaChart>
@@ -93,14 +93,14 @@ export function DisposedBarChart({ data, height, colors, isDark }: { data: { nam
   const palette = colors && colors.length
     ? colors
     : isDark
-      ? ['#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171', '#22d3ee', '#f472b6', '#a3e635']
-      : ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#84cc16'];
+      ? ['#fbbf24', '#60a5fa', '#a78bfa', '#22d3ee', '#f472b6', '#f87171', '#e879f9', '#fb923c']
+      : ['#f59e0b', '#3b82f6', '#8b5cf6', '#06b6d4', '#ec4899', '#ef4444', '#d946ef', '#f97316'];
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} layout="vertical" margin={{ top: 0, right: 24, left: 10, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)'} horizontal={false} />
-        <XAxis type="number" tick={{ fontSize: 11, fill: isDark ? '#666666' : '#888888' }} allowDecimals={false} axisLine={false} tickLine={false} />
-        <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: isDark ? '#a0a0a0' : '#555555' }} width={140} axisLine={false} tickLine={false} />
+        <XAxis type="number" tick={{ fontSize: 11, fill: isDark ? '#8b8b8b' : '#888888' }} allowDecimals={false} axisLine={false} tickLine={false} />
+        <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: isDark ? '#b5b5b5' : '#555555' }} width={140} axisLine={false} tickLine={false} />
         <Tooltip formatter={(val: any) => [`${val} units`, 'Disposed']} cursor={{ fill: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' }} contentStyle={tooltipStyle(isDark)} />
         <Bar dataKey="quantity" radius={[0, 4, 4, 0]} name="Disposed">
           {data.map((_, i) => (
