@@ -305,19 +305,71 @@ export default function StaffDailyReportPage() {
         </div>
       )}
 
-      {/* Pending Sales Summary — only for pending items */}
-      {sales.length > 0 && (
-        <div className="mt-4 rounded-xl border border-card-border bg-card-bg p-4 shadow-sm">
-          <div className="border-l-4 border-accent-blue pl-4 text-right space-y-1">
-            <p className="text-sm font-semibold text-text-primary">Total Sales: <span className="font-bold">{peso(sales.reduce((sum, s) => sum + s.total, 0))}</span></p>
-            <p className="text-sm text-text-secondary">Total Cash: <span className="font-medium text-text-primary">{peso(sales.reduce((sum, s) => s.items.filter((i) => i.paymentMethod === 'Cash' || (i.paymentMethod === 'Split' && i.paymentSplit)).reduce((a, i) => a + (i.paymentMethod === 'Cash' ? i.subTotal : (i.paymentSplit as any)?.cash ?? 0), 0) + sum, 0))}</span></p>
-            <p className="text-sm text-text-secondary">Total Gcash: <span className="font-medium text-text-primary">{peso(sales.reduce((sum, s) => s.items.filter((i) => i.paymentMethod === 'Gcash' || (i.paymentMethod === 'Split' && i.paymentSplit)).reduce((a, i) => a + (i.paymentMethod === 'Gcash' ? i.subTotal : (i.paymentSplit as any)?.gcash ?? 0), 0) + sum, 0))}</span></p>
-            <p className="text-sm text-text-secondary">Total Bank Transfer: <span className="font-medium text-text-primary">{peso(sales.reduce((sum, s) => s.items.filter((i) => i.paymentMethod === 'BankTransfer' || (i.paymentMethod === 'Split' && i.paymentSplit)).reduce((a, i) => a + (i.paymentMethod === 'BankTransfer' ? i.subTotal : (i.paymentSplit as any)?.bankTransfer ?? 0), 0) + sum, 0))}</span></p>
-            <p className="text-sm text-text-secondary">Total Cashless: <span className="font-medium text-text-primary">{peso(sales.reduce((sum, s) => s.items.filter((i) => i.paymentMethod === 'Cashless' || (i.paymentMethod === 'Split' && i.paymentSplit)).reduce((a, i) => a + (i.paymentMethod === 'Cashless' ? i.subTotal : (i.paymentSplit as any)?.cashless ?? 0), 0) + sum, 0))}</span></p>
-            <p className="text-sm text-text-secondary">Total Discount: <span className="font-medium text-text-primary">{peso(sales.reduce((sum, s) => sum + s.items.reduce((a, i) => a + (i.discount ?? 0), 0), 0))}</span></p>
+      {/* Daily Report Summary — redesigned to be easy to scan: a prominent
+          Total Sales headline, then each payment method as an aligned
+          label → value row (with a small color dot), instead of the old
+          cramped right-aligned text block. */}
+      {sales.length > 0 && (() => {
+        // Per-method totals. A Split item contributes each of its split
+        // buckets; a non-split item contributes its whole subTotal to its own
+        // method. Computed once here for clarity (was inline reducers).
+        const methodTotal = (method: 'Cash' | 'Gcash' | 'BankTransfer' | 'Cashless') =>
+          sales.reduce(
+            (sum, s) =>
+              sum +
+              s.items.reduce(
+                (a, i) =>
+                  a +
+                  (i.paymentMethod === method
+                    ? i.subTotal
+                    : i.paymentMethod === 'Split' && i.paymentSplit
+                      ? Number(
+                          (i.paymentSplit as any)?.[
+                            method === 'BankTransfer' ? 'bankTransfer' : method.toLowerCase()
+                          ] ?? 0,
+                        )
+                      : 0),
+                0,
+              ),
+            0,
+          );
+        const totalSales = sales.reduce((sum, s) => sum + s.total, 0);
+        const totalDiscount = sales.reduce((sum, s) => sum + s.items.reduce((a, i) => a + (i.discount ?? 0), 0), 0);
+        const rows: { label: string; value: number; dot: string }[] = [
+          { label: 'Cash', value: methodTotal('Cash'), dot: '#10b981' },
+          { label: 'Gcash', value: methodTotal('Gcash'), dot: '#3b82f6' },
+          { label: 'Bank Transfer', value: methodTotal('BankTransfer'), dot: '#a855f7' },
+          { label: 'Cashless', value: methodTotal('Cashless'), dot: '#06b6d4' },
+        ];
+        return (
+          <div className="mt-4 rounded-xl border border-card-border bg-card-bg p-5 shadow-sm">
+            {/* Headline: Total Sales */}
+            <div className="flex items-baseline justify-between gap-3 border-b border-card-border pb-3">
+              <span className="text-sm font-semibold text-text-secondary">Total Sales</span>
+              <span className="text-2xl font-bold tabular-nums" style={{ color: '#10b981' }}>{peso(totalSales)}</span>
+            </div>
+
+            {/* Payment methods — aligned label (left) → amount (right). */}
+            <div className="mt-3 space-y-2">
+              {rows.map((r) => (
+                <div key={r.label} className="flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2 text-sm text-text-secondary">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: r.dot }} />
+                    {r.label}
+                  </span>
+                  <span className="text-sm font-semibold tabular-nums text-text-primary">{peso(r.value)}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Discount, set apart at the bottom. */}
+            <div className="mt-3 flex items-center justify-between gap-3 border-t border-card-border pt-3">
+              <span className="text-sm text-text-secondary">Total Discount</span>
+              <span className="text-sm font-semibold tabular-nums" style={{ color: '#f59e0b' }}>{peso(totalDiscount)}</span>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Today's Disposals — PENDING only */}
       <div className="mt-6 overflow-x-auto rounded-xl border border-card-border bg-card-bg shadow-sm">
