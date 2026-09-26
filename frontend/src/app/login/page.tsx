@@ -68,14 +68,13 @@ export default function LoginPage() {
       <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-white/[0.03] blur-3xl" />
 
       <div className="relative flex w-full max-w-[420px] flex-col items-center">
-        {/* Circular logo with a hover shimmer. Plain/professional: the SVG is
-            already a clean disc + ring; wrapped in a rounded shimmer container
-            with a soft shadow for depth. */}
-        <div className="mb-10 logo-shimmer rounded-full shadow-2xl shadow-black/50">
+        {/* Plain box/package logo — a clean icon on a transparent background
+            (no circle frame). Sized large on the login screen. */}
+        <div className="mb-10">
           <img
             src="/logo.svg"
             alt="CHX Inventory System"
-            className="h-[160px] w-[160px] sm:h-[200px] sm:w-[200px] object-contain"
+            className="h-[128px] w-[128px] sm:h-[152px] sm:w-[152px] object-contain"
           />
         </div>
 
