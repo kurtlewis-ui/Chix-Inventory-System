@@ -1,10 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="240" height="240" role="img" aria-label="CHX Inventory System">
-  <!-- Plain box / package mark (inventory). Bold rounded outline on a
-       transparent background, drawn in white so it reads on the app's dark
-       surfaces (login screen + sidebars + mobile headers are all dark). The
-       404 page renders the same box via the lucide <Package/> icon so it stays
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="240" height="240" role="img" aria-label="CHX Inventory System">
+  <!-- CHX Inventory mark: a flat white circle with a navy box/package icon
+       centered inside. No ring, gradient, or shadow — a clean, high-contrast
+       badge that reads crisply on the app's dark navy surfaces (login,
+       sidebars, mobile headers) and doubles as the favicon. The 404 page
+       renders the plain box via the lucide <Package/> icon so it stays
        theme-aware on a light background. -->
-  <g fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Flat white backing circle. -->
+  <circle cx="20" cy="20" r="20" fill="#ffffff" />
+  <!-- Navy box/package mark, centered. The icon is authored on a 24x24 grid,
+       so it's translated (+8,+8) to sit centered inside the 40x40 circle,
+       leaving an even margin of padding all around. -->
+  <g transform="translate(8 8)" fill="none" stroke="#0f1b34" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
     <!-- Top lid crease (diagonal fold across the top face). -->
     <path d="M7.5 4.27 16.5 9.42" />
     <!-- Outer box outline. -->
