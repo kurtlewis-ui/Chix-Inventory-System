@@ -341,7 +341,7 @@ function StatsCard({ href, icon, value, label, subtitle, accentColor }: { href: 
 function ChartPlaceholder({ message }: { message: string }) {
   return (
     <div className="h-72 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-card-border text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-teal/10"><BarChart3 size={28} className="text-accent-teal" /></div>
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: 'rgba(245, 158, 11, 0.10)' }}><BarChart3 size={28} style={{ color: '#f59e0b' }} /></div>
       <p className="text-sm font-medium text-text-secondary">{message}</p>
     </div>
   );
