@@ -313,7 +313,7 @@ export default function StaffDailyReportPage() {
         // Per-method totals. A Split item contributes each of its split
         // buckets; a non-split item contributes its whole subTotal to its own
         // method. Computed once here for clarity (was inline reducers).
-        const methodTotal = (method: 'Cash' | 'Gcash' | 'BankTransfer' | 'Cashless') =>
+        const methodTotal = (method: 'Cash' | 'Gcash' | 'BankTransfer') =>
           sales.reduce(
             (sum, s) =>
               sum +
@@ -339,7 +339,6 @@ export default function StaffDailyReportPage() {
           { label: 'Cash', value: methodTotal('Cash'), dot: '#10b981' },
           { label: 'Gcash', value: methodTotal('Gcash'), dot: '#3b82f6' },
           { label: 'Bank Transfer', value: methodTotal('BankTransfer'), dot: '#a855f7' },
-          { label: 'Cashless', value: methodTotal('Cashless'), dot: '#06b6d4' },
         ];
         return (
           <div className="mt-4 rounded-xl border border-card-border bg-card-bg p-5 shadow-sm">
