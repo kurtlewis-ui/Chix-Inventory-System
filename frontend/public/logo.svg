@@ -1,7 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="CHX Inventory System">
-  <!-- Plain, professional circular mark: a solid deep disc, a single crisp
-       hairline ring, and a clean CHX wordmark. No gradients/underline clutter. -->
-  <circle cx="120" cy="120" r="116" fill="#101828"/>
-  <circle cx="120" cy="120" r="116" fill="none" stroke="#ffffff" stroke-opacity="0.85" stroke-width="3"/>
-  <text x="120" y="146" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-size="82" font-weight="800" letter-spacing="2" fill="#ffffff">CHX</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="240" height="240" role="img" aria-label="CHX Inventory System">
+  <!-- Plain box / package mark (inventory). Bold rounded outline on a
+       transparent background, drawn in white so it reads on the app's dark
+       surfaces (login screen + sidebars + mobile headers are all dark). The
+       404 page renders the same box via the lucide <Package/> icon so it stays
+       theme-aware on a light background. -->
+  <g fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Top lid crease (diagonal fold across the top face). -->
+    <path d="M7.5 4.27 16.5 9.42" />
+    <!-- Outer box outline. -->
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+    <!-- Center seam from the top face down the front edge. -->
+    <path d="m3.3 7 8.7 5 8.7-5" />
+    <path d="M12 22V12" />
+  </g>
 </svg>

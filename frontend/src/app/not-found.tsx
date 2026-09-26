@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Package } from 'lucide-react';
 
 /**
  * App-wide 404 page. Replaces Next's default unstyled 404 with a branded,
@@ -7,7 +8,9 @@ import Link from 'next/link';
 export default function NotFound() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-page-bg px-6 text-center">
-      <img src="/logo.svg" alt="CHX Inventory System" className="mb-6 h-16 w-16 rounded-full object-contain" />
+      {/* Box/package logo via the lucide icon so it's theme-aware (inherits
+          text-text-primary) on this page's light-or-dark background. */}
+      <Package className="mb-6 h-16 w-16 text-text-primary" strokeWidth={1.6} aria-label="CHX Inventory System" />
       <p className="text-6xl font-black tracking-tight text-text-primary">404</p>
       <h1 className="mt-2 text-xl font-bold text-text-primary">Page not found</h1>
       <p className="mt-2 max-w-sm text-sm text-text-secondary">
