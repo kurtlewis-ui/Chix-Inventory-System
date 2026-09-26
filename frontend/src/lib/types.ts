@@ -254,6 +254,11 @@ export interface BranchSummary {
   totalExpenses: number;
   totalDisposals: number;
   totalDiscount: number; // Gross − Discount = Net; subtracted once
+  // Today's approved sales split by concrete payment method (Split items
+  // apportioned across buckets). Used by the Pending "Today (Approved)" strip.
+  cash: number;
+  gcash: number;
+  bankTransfer: number;
   net: number;
 }
 

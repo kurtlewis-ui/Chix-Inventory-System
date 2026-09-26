@@ -454,6 +454,22 @@ export default function SalesPendingPage() {
                 <p className="text-lg font-bold tabular-nums break-words" style={{ color: branchSummary.net >= 0 ? '#3b82f6' : '#ef4444' }}>{peso(branchSummary.net)}</p>
               </div>
             </div>
+            {/* Payment-method breakdown of today's approved sales: Cash, Gcash,
+                and Bank Transfer (Split amounts are apportioned server-side). */}
+            <div className="mt-3 grid grid-cols-3 gap-3 border-t border-card-border pt-3 text-center">
+              <div>
+                <p className="text-xs text-text-secondary">Cash</p>
+                <p className="text-base font-bold tabular-nums break-words" style={{ color: '#10b981' }}>{peso(branchSummary.cash)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-text-secondary">Gcash</p>
+                <p className="text-base font-bold tabular-nums break-words" style={{ color: '#3b82f6' }}>{peso(branchSummary.gcash)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-text-secondary">Bank Transfer</p>
+                <p className="text-base font-bold tabular-nums break-words" style={{ color: '#a855f7' }}>{peso(branchSummary.bankTransfer)}</p>
+              </div>
+            </div>
           </div>
         </div>
       )}
