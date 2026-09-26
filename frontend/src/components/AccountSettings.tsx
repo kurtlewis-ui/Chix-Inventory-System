@@ -106,7 +106,13 @@ export default function AccountSettings() {
       return;
     }
     try {
-      await changePassword.mutateAsync({ currentPassword, newPassword, confirmPassword });
+      // Trim so a stray space appended by the browser/password-manager autofill
+      // can't cause a false "current password is incorrect".
+      await changePassword.mutateAsync({
+        currentPassword: currentPassword.trim(),
+        newPassword: newPassword.trim(),
+        confirmPassword: confirmPassword.trim(),
+      });
       setPwOk('Password changed. Please log in again with your new password.');
       toast.success('Password changed. Please log in again.', 'Password updated');
       // The server invalidates all sessions on password change, so send the
@@ -197,15 +203,30 @@ export default function AccountSettings() {
           <div className="bg-card-bg border border-card-border rounded-xl p-6 space-y-4">
             <h2 className="text-lg font-bold text-text-primary flex items-center gap-2"><KeyRound size={18} /> Change Password</h2>
 
+            {/* Hidden username field: giving the password manager the account
+                it belongs to (and the autoComplete hints below) is what stops
+                it from dumping a *saved* credential into "Current Password".
+                Without this, Chrome/Google Password Manager would autofill the
+                current-password box with a stale saved value, causing a false
+                "current password is incorrect". */}
+            <input
+              type="text"
+              name="username"
+              autoComplete="username"
+              value={email}
+              readOnly
+              hidden
+              aria-hidden="true"
+            />
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">Current Password</label>
-              <input type={showPw ? 'text' : 'password'} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full border border-input-border rounded px-3 py-2 text-sm bg-input-bg focus:outline-none focus:border-input-focus" />
+              <input type={showPw ? 'text' : 'password'} name="current-password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full border border-input-border rounded px-3 py-2 text-sm bg-input-bg focus:outline-none focus:border-input-focus" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">New Password</label>
                 <div className="relative">
-                  <input type={showPw ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full border border-input-border rounded px-3 py-2 text-sm bg-input-bg focus:outline-none focus:border-input-focus pr-10" />
+                  <input type={showPw ? 'text' : 'password'} name="new-password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full border border-input-border rounded px-3 py-2 text-sm bg-input-bg focus:outline-none focus:border-input-focus pr-10" />
                   <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary">
                     {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -213,7 +234,7 @@ export default function AccountSettings() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">Confirm New Password</label>
-                <input type={showPw ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full border border-input-border rounded px-3 py-2 text-sm bg-input-bg focus:outline-none focus:border-input-focus" />
+                <input type={showPw ? 'text' : 'password'} name="confirm-new-password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full border border-input-border rounded px-3 py-2 text-sm bg-input-bg focus:outline-none focus:border-input-focus" />
               </div>
             </div>
 
