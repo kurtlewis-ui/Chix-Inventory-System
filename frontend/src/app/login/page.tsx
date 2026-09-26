@@ -68,8 +68,8 @@ export default function LoginPage() {
       <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-[#3b5b9a]/10 blur-3xl" />
 
       <div className="relative flex w-full max-w-[420px] flex-col items-center">
-        {/* Plain box/package logo — a clean icon on a transparent background
-            (no circle frame). Sized large on the login screen. */}
+        {/* Box/package logo in a flat white circle badge (navy box on white,
+            no ring). Sized large on the login screen. */}
         <div className="mb-10">
           <img
             src="/logo.svg"
