@@ -167,7 +167,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#0f0f0f' }}>
+    // Root canvas behind the sidebar + centered content. In light mode this
+    // uses the same light page background (#f2f2f1) so the gutters and the
+    // area revealed on scroll blend with the content instead of showing a
+    // black band. Dark mode keeps the near-black canvas. The sidebar stays
+    // navy in both themes regardless.
+    <div className="min-h-screen" style={{ background: contentTheme === 'light' ? '#f2f2f1' : '#0f0f0f' }}>
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
