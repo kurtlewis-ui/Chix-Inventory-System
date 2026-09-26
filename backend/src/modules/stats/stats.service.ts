@@ -200,15 +200,14 @@ export class StatsService {
     const totalGrossSales = totalSales + totalDiscount;
 
     // Payment-method buckets (Cash / Gcash / Bank Transfer). Split items are
-    // apportioned across their buckets; the generic "cashless" remainder isn't
-    // surfaced here (the strip only shows the three concrete methods).
+    // apportioned across their three buckets.
     let cash = 0;
     let gcash = 0;
     let bankTransfer = 0;
     for (const item of paymentItems) {
       if (item.paymentMethod === 'Split' && item.paymentSplit) {
         const split = item.paymentSplit as unknown as {
-          cash: number; gcash: number; bankTransfer: number; cashless: number;
+          cash: number; gcash: number; bankTransfer: number;
         };
         cash += Number(split.cash || 0);
         gcash += Number(split.gcash || 0);

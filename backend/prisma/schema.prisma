@@ -282,8 +282,6 @@ enum PaymentMethod {
   Cash
   Gcash
   BankTransfer
-  // Generic "paid digitally, unspecified" bucket.
-  Cashless
   // Item-level only: paid across more than one of the above (see
   // SaleItem.paymentSplit for the breakdown).
   Split
@@ -375,8 +373,8 @@ model SaleItem {
   bankNote      String?       @map("bank_note") @db.VarChar(100)
   // Free-text reminder/note for this item.
   note          String?       @map("note") @db.VarChar(255)
-  // { cash, gcash, bankTransfer, cashless } amounts, only when paymentMethod
-  // is Split — must sum to subTotal.
+  // { cash, gcash, bankTransfer } amounts, only when paymentMethod is Split —
+  // must sum exactly to subTotal.
   paymentSplit  Json?         @map("payment_split") @db.JsonB
 
   // Relations

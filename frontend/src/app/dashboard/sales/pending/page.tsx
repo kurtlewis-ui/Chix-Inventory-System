@@ -57,7 +57,6 @@ function itemPaymentLabel(item: { paymentMethod: PaymentMethod; bankNote?: strin
     if (item.paymentSplit.cash > 0) parts.push(`₱${item.paymentSplit.cash.toLocaleString(undefined, { minimumFractionDigits: 2 })} Cash`);
     if (item.paymentSplit.gcash > 0) parts.push(`₱${item.paymentSplit.gcash.toLocaleString(undefined, { minimumFractionDigits: 2 })} Gcash`);
     if ((item.paymentSplit.bankTransfer ?? 0) > 0) parts.push(`₱${item.paymentSplit.bankTransfer.toLocaleString(undefined, { minimumFractionDigits: 2 })} Bank`);
-    if ((item.paymentSplit.cashless ?? 0) > 0) parts.push(`₱${item.paymentSplit.cashless.toLocaleString(undefined, { minimumFractionDigits: 2 })} Cashless`);
     return parts.join(' · ') || 'Split';
   }
   return methodLabel(item.paymentMethod);
@@ -242,7 +241,7 @@ export default function SalesPendingPage() {
     branchId: selectedShop || undefined,
   });
   const sales = useMemo(() => filterSalesByProduct(data?.data ?? [], search), [data?.data, search]);
-  const summary = data?.summary ?? { grossSales: 0, cash: 0, gcash: 0, bankTransfer: 0, cashless: 0, discount: 0, total: 0, count: 0 };
+  const summary = data?.summary ?? { grossSales: 0, cash: 0, gcash: 0, bankTransfer: 0, discount: 0, total: 0, count: 0 };
 
   // Admin may approve/decline pending sales but must NOT edit them (the backend
   // rejects Admin edits too). Only the Owner sees the Edit control here.
@@ -633,18 +632,10 @@ export default function SalesPendingPage() {
                 <span className="text-text-muted">Gcash</span>
                 <span className="text-text-secondary tabular-nums">{peso(summary.gcash)}</span>
               </div>
-              {summary.bankTransfer > 0 && (
-                <div className="flex items-center justify-between gap-4 pl-3 text-sm">
-                  <span className="text-text-muted">Bank Transfer</span>
-                  <span className="text-text-secondary tabular-nums">{peso(summary.bankTransfer)}</span>
-                </div>
-              )}
-              {summary.cashless > 0 && (
-                <div className="flex items-center justify-between gap-4 pl-3 text-sm">
-                  <span className="text-text-muted">Cashless</span>
-                  <span className="text-text-secondary tabular-nums">{peso(summary.cashless)}</span>
-                </div>
-              )}
+              <div className="flex items-center justify-between gap-4 pl-3 text-sm">
+                <span className="text-text-muted">Bank Transfer</span>
+                <span className="text-text-secondary tabular-nums">{peso(summary.bankTransfer)}</span>
+              </div>
             </div>
           </div>
         </div>
