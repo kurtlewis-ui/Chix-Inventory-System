@@ -145,7 +145,7 @@ export class StatsService {
     // previous day until the clock passes 2 AM.
     const start = startOfBusinessDay();
 
-    const [salesAgg, expensesAgg, disposalsAgg, discountAgg] = await Promise.all([
+    const [salesAgg, expensesAgg, disposalsAgg, discountAgg, paymentItems] = await Promise.all([
       this.prisma.sale.aggregate({
         where: { branchId: resolvedBranchId, status: SaleStatus.APPROVED, decidedAt: { gte: start } },
         _sum: { total: true },
@@ -178,6 +178,16 @@ export class StatsService {
         },
         _sum: { discount: true },
       }),
+      // Per-payment-method breakdown of today's approved sales. Pulled at the
+      // item level (payment varies per item) and split across buckets exactly
+      // like the /sales list summary: a Split item contributes its split
+      // amounts, everything else contributes its subTotal to its own bucket.
+      this.prisma.saleItem.findMany({
+        where: {
+          sale: { branchId: resolvedBranchId, status: SaleStatus.APPROVED, decidedAt: { gte: start } },
+        },
+        select: { paymentMethod: true, subTotal: true, paymentSplit: true },
+      }),
     ]);
 
     // `totalSales` here is the NET (Σ Sale.total, already after discount).
@@ -189,6 +199,28 @@ export class StatsService {
     // Derived (no extra query) so Gross − Discount = Net reconciles exactly.
     const totalGrossSales = totalSales + totalDiscount;
 
+    // Payment-method buckets (Cash / Gcash / Bank Transfer). Split items are
+    // apportioned across their buckets; the generic "cashless" remainder isn't
+    // surfaced here (the strip only shows the three concrete methods).
+    let cash = 0;
+    let gcash = 0;
+    let bankTransfer = 0;
+    for (const item of paymentItems) {
+      if (item.paymentMethod === 'Split' && item.paymentSplit) {
+        const split = item.paymentSplit as unknown as {
+          cash: number; gcash: number; bankTransfer: number; cashless: number;
+        };
+        cash += Number(split.cash || 0);
+        gcash += Number(split.gcash || 0);
+        bankTransfer += Number(split.bankTransfer || 0);
+      } else {
+        const amount = Number(item.subTotal);
+        if (item.paymentMethod === 'Cash') cash += amount;
+        else if (item.paymentMethod === 'Gcash') gcash += amount;
+        else if (item.paymentMethod === 'BankTransfer') bankTransfer += amount;
+      }
+    }
+
     return {
       branchId: resolvedBranchId,
       totalGrossSales,
@@ -196,6 +228,9 @@ export class StatsService {
       totalExpenses,
       totalDisposals,
       totalDiscount,
+      cash,
+      gcash,
+      bankTransfer,
       net: totalSales - totalExpenses - totalDisposals,
     };
   }
