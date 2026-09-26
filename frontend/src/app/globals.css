@@ -84,7 +84,7 @@ body {
      a harsh outline. The focus ring confirms interactivity. */
   --content-input-bg: #f2f2f1;
   --content-input-border: rgba(30, 30, 28, 0.16);
-  --content-btn-primary: #000000;      /* brand accent kept as-is (black in light) */
+  --content-btn-primary: #0f1b34;      /* deep navy — matches the login page (light mode only) */
   --content-btn-primary-text: #ffffff;
   --content-input-focus: #6f6e68;      /* neutral gray focus tone (no blue) */
   --content-row-alt: rgba(30, 30, 28, 0.025);   /* barely-there zebra striping */
@@ -794,4 +794,22 @@ select optgroup {
   .toast-icon-swirl {
     opacity: 0 !important;
   }
+}
+
+
+/* ----------------------------------------------------------------------
+   Default profile avatar (initials fallback shown when no photo is set).
+   Base look is tuned for dark surfaces: a faint white disc with light text.
+   In LIGHT mode that white-on-light combo blends into the page, so scope a
+   readable override — a soft gray circle with dark initials. Applies to every
+   fallback avatar across owner, admin, and staff (settings, sidebars, users
+   list). Avatars that sit on the always-navy sidebar are unaffected because
+   they aren't inside .content-light. */
+.avatar-fallback {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+.content-light .avatar-fallback {
+  background-color: #e2e2df;   /* soft neutral gray, a step below the canvas */
+  color: #1e1e1c;              /* deep charcoal initials — clearly legible */
 }

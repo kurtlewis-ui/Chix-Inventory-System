@@ -168,7 +168,7 @@ function AdminStaffView() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={user.avatarUrl} alt="" loading="lazy" width={36} height={36} className="w-9 h-9 rounded-full object-cover" />
                     ) : (
-                      <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-xs text-text-muted">
+                      <div className="avatar-fallback w-9 h-9 rounded-full flex items-center justify-center text-xs">
                         {user.firstName?.[0] ?? ''}{user.lastName?.[0] ?? ''}
                       </div>
                     )}
@@ -219,7 +219,7 @@ function AdminStaffView() {
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={user.avatarUrl} alt="" loading="lazy" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full object-cover" />
                       ) : (
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs text-text-muted">
+                        <div className="avatar-fallback flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs">
                           {user.firstName?.[0] ?? ''}{user.lastName?.[0] ?? ''}
                         </div>
                       )}
@@ -276,7 +276,7 @@ function AdminStaffView() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={selectedUser.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-sm font-bold text-text-primary">
+                <div className="avatar-fallback w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold">
                   {selectedUser.firstName?.[0] ?? ''}{selectedUser.lastName?.[0] ?? ''}
                 </div>
               )}
@@ -530,7 +530,7 @@ function OwnerUsersView() {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={formData.avatarUrl} alt="" className="w-16 h-16 rounded-full object-cover border border-card-border" />
         ) : (
-          <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center text-white text-xl font-bold border border-card-border">
+          <div className="avatar-fallback w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold border border-card-border">
             {(formData.firstName[0] ?? '').toUpperCase()}{(formData.lastName[0] ?? '').toUpperCase()}
           </div>
         )}
@@ -691,7 +691,7 @@ function OwnerUsersView() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={user.avatarUrl} alt="" loading="lazy" width={36} height={36} className="w-9 h-9 rounded-full object-cover" />
                     ) : (
-                      <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-xs text-text-muted">
+                      <div className="avatar-fallback w-9 h-9 rounded-full flex items-center justify-center text-xs">
                         {user.firstName?.[0] ?? ''}{user.lastName?.[0] ?? ''}
                       </div>
                     )}
@@ -758,7 +758,7 @@ function OwnerUsersView() {
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={user.avatarUrl} alt="" loading="lazy" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full object-cover" />
                       ) : (
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs text-text-muted">
+                        <div className="avatar-fallback flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs">
                           {user.firstName?.[0] ?? ''}{user.lastName?.[0] ?? ''}
                         </div>
                       )}
@@ -839,7 +839,7 @@ function OwnerUsersView() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={selectedUser.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-sm font-bold text-text-primary">
+                <div className="avatar-fallback w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold">
                   {selectedUser.firstName?.[0] ?? ''}{selectedUser.lastName?.[0] ?? ''}
                 </div>
               )}

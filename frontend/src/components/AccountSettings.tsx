@@ -143,7 +143,7 @@ export default function AccountSettings() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={avatarUrl} alt="avatar" className="w-16 h-16 rounded-full object-cover border border-card-border" />
                 ) : (
-                  <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center text-white text-xl font-bold border border-card-border">{initials}</div>
+                  <div className="avatar-fallback w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold border border-card-border">{initials}</div>
                 )}
                 <button
                   type="button"
