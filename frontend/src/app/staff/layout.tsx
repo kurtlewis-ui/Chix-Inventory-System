@@ -126,7 +126,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
 
       {/* Sidebar — desktop always visible, mobile slides in. Restrained glass:
           translucent nav tint + blur for depth, keeping the dark identity. */}
-      <aside className={`fixed inset-y-0 left-0 z-50 flex w-[220px] flex-col bg-nav-bg/80 backdrop-blur-xl border-r border-nav-border transition-transform duration-200 md:translate-x-0 ${
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-[220px] flex-col bg-nav-bg border-r border-nav-border transition-transform duration-200 md:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         {/* Logo */}
@@ -178,7 +178,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
             {/* Theme toggle — in-flow so it never overlaps the name/branch */}
             <button
               onClick={() => { toggleContentTheme(); setThemeAnimKey((k) => k + 1); }}
-              className="shrink-0 p-1.5 rounded-lg text-[#999999] hover:text-white hover:bg-white/5 transition-colors"
+              className="shrink-0 p-1.5 rounded-lg text-nav-text hover:text-white hover:bg-white/5 transition-colors"
               title={contentTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
               aria-label="Toggle theme"
             >
@@ -190,7 +190,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2 mt-3">
             <Link
               href="/staff/settings"
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-[#999999] hover:text-white hover:bg-white/5 transition-colors"
+              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-nav-text hover:text-white hover:bg-white/5 transition-colors"
               title="Settings"
             >
               <SettingsIcon size={14} />
@@ -198,7 +198,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
             </Link>
             <button
               onClick={handleLogout}
-              className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-[#999999] hover:text-[#ef4444] hover:bg-[#ef4444]/10 transition-colors"
+              className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-nav-text hover:text-[#ef4444] hover:bg-[#ef4444]/10 transition-colors"
               title="Logout"
               aria-label="Logout"
             >

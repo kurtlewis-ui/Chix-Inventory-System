@@ -63,9 +63,9 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10" style={{ background: '#0f0f0f' }}>
-      {/* Subtle radial glow */}
-      <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-white/[0.03] blur-3xl" />
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10" style={{ background: '#0a1122' }}>
+      {/* Subtle navy radial glow */}
+      <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-[#3b5b9a]/10 blur-3xl" />
 
       <div className="relative flex w-full max-w-[420px] flex-col items-center">
         {/* Plain box/package logo — a clean icon on a transparent background
@@ -79,21 +79,21 @@ export default function LoginPage() {
         </div>
 
         {/* Card */}
-        <div className="w-full rounded-2xl bg-[#1a1a1a]/95 border border-[#333333] p-8 shadow-xl shadow-black/40">
+        <div className="w-full rounded-2xl bg-[#0f1b34]/95 border border-[#243b63] p-8 shadow-xl shadow-black/40">
           <div className="text-center mb-6">
             <h1 className="text-lg font-bold text-white">Welcome Back</h1>
-            <p className="text-sm text-[#666666] mt-1">Sign in to your account</p>
+            <p className="text-sm text-[#94a3c4] mt-1">Sign in to your account</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Field */}
             <div>
-              <label htmlFor="email" className="mb-2 block text-sm font-medium text-[#a0a0a0]">
+              <label htmlFor="email" className="mb-2 block text-sm font-medium text-[#b8c4de]">
                 Email Address
               </label>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-                  <Mail size={18} className="text-[#666666]" />
+                  <Mail size={18} className="text-[#7f8db0]" />
                 </div>
                 <input
                   id="email"
@@ -101,7 +101,7 @@ export default function LoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-[#333333] bg-[#1a1a1a] pl-11 pr-4 py-3 text-white placeholder-[#666666] outline-none transition-all focus:border-white/40 focus:ring-2 focus:ring-white/10"
+                  className="w-full rounded-xl border border-[#243b63] bg-[#0c1526] pl-11 pr-4 py-3 text-white placeholder-[#5b6b8c] outline-none transition-all focus:border-white/40 focus:ring-2 focus:ring-white/10"
                   placeholder="you@example.com"
                 />
               </div>
@@ -109,12 +109,12 @@ export default function LoginPage() {
 
             {/* Password Field */}
             <div>
-              <label htmlFor="password" className="mb-2 block text-sm font-medium text-[#a0a0a0]">
+              <label htmlFor="password" className="mb-2 block text-sm font-medium text-[#b8c4de]">
                 Password
               </label>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-                  <Lock size={18} className="text-[#666666]" />
+                  <Lock size={18} className="text-[#7f8db0]" />
                 </div>
                 <input
                   id="password"
@@ -122,13 +122,13 @@ export default function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl border border-[#333333] bg-[#1a1a1a] pl-11 pr-12 py-3 text-white placeholder-[#666666] outline-none transition-all focus:border-white/40 focus:ring-2 focus:ring-white/10"
+                  className="w-full rounded-xl border border-[#243b63] bg-[#0c1526] pl-11 pr-12 py-3 text-white placeholder-[#5b6b8c] outline-none transition-all focus:border-white/40 focus:ring-2 focus:ring-white/10"
                   placeholder="Enter your password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#666666] hover:text-[#a0a0a0] transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#7f8db0] hover:text-[#b8c4de] transition-colors"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -168,7 +168,7 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <p className="mt-6 text-[11px] text-[#666666] tracking-wider uppercase">
+        <p className="mt-6 text-[11px] text-[#7f8db0] tracking-wider uppercase">
           Inventory System
         </p>
       </div>
