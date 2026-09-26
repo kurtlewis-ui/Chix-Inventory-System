@@ -33,12 +33,6 @@ export class PaymentSplitDto {
   @IsNumber()
   @Min(0)
   bankTransfer: number;
-
-  @ApiProperty({ example: 0 })
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  cashless: number;
 }
 
 export class SaleItemInputDto {

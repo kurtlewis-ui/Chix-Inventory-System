@@ -273,7 +273,6 @@ function toDraftSaleItemPayload(i: any) {
       cash: i.paymentSplit.cash ?? 0,
       gcash: i.paymentSplit.gcash ?? 0,
       bankTransfer: i.paymentSplit.bankTransfer ?? 0,
-      cashless: i.paymentSplit.cashless ?? 0,
     };
   }
   return out;
@@ -443,18 +442,16 @@ function DraftBag() {
   // item's Split-payment breakdown across its buckets. Line totals are
   // net of each item's discount.
   const paymentTotals = useMemo(() => {
-    const totals = { cash: 0, gcash: 0, bankTransfer: 0, cashless: 0 };
+    const totals = { cash: 0, gcash: 0, bankTransfer: 0 };
     for (const item of items) {
       const lineTotal = item.unitPrice * item.quantity - (item.discount ?? 0);
       if (item.paymentMethod === 'Split' && item.paymentSplit) {
         totals.cash += item.paymentSplit.cash ?? 0;
         totals.gcash += item.paymentSplit.gcash ?? 0;
         totals.bankTransfer += item.paymentSplit.bankTransfer ?? 0;
-        totals.cashless += item.paymentSplit.cashless ?? 0;
       } else if (item.paymentMethod === 'Cash') totals.cash += lineTotal;
       else if (item.paymentMethod === 'Gcash') totals.gcash += lineTotal;
       else if (item.paymentMethod === 'BankTransfer') totals.bankTransfer += lineTotal;
-      else if (item.paymentMethod === 'Cashless') totals.cashless += lineTotal;
     }
     return totals;
   }, [items]);
@@ -796,12 +793,6 @@ function DraftBag() {
                           <span className="text-text-primary">{peso(paymentTotals.bankTransfer)}</span>
                         </div>
                       )}
-                      {paymentTotals.cashless > 0 && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-text-secondary">Total Cashless</span>
-                          <span className="text-text-primary">{peso(paymentTotals.cashless)}</span>
-                        </div>
-                      )}
                       {itemsDiscountTotal > 0 && (
                         <div className="flex items-center justify-between">
                           <span className="text-text-secondary">Total Discount</span>
@@ -875,15 +866,15 @@ function EditPaymentInline({
   }
 
   // For a Split, the three entered buckets (cash/gcash/bankTransfer) must not
-  // exceed the line total; the backend treats whatever is left over as the
-  // generic "cashless" remainder. We surface that remainder + an over-allocation
-  // warning so staff can see exactly how the line is being paid.
+  // must add up EXACTLY to the line total across the three buckets — there is
+  // no leftover. We surface the remaining amount and block saving until it's
+  // fully allocated (over OR under).
   const splitCashN = Number(splitCash) || 0;
   const splitGcashN = Number(splitGcash) || 0;
   const splitBankN = Number(splitBank) || 0;
   const allocated = splitCashN + splitGcashN + splitBankN;
   const remainder = lineTotal - allocated;
-  const overAllocated = allocated > lineTotal + 0.001;
+  const splitMismatch = Math.abs(remainder) > 0.01;
 
   function handleSave() {
     const usesBank = method === 'BankTransfer' || method === 'Split';
@@ -896,9 +887,6 @@ function EditPaymentInline({
               cash: splitCashN,
               gcash: splitGcashN,
               bankTransfer: splitBankN,
-              // Remainder mirrors the server, which recomputes cashless as
-              // subTotal − (cash + gcash + bankTransfer). Never negative.
-              cashless: Math.max(0, remainder),
             }
           : null,
     });
@@ -940,16 +928,18 @@ function EditPaymentInline({
               <input type="text" value={bankNote} onChange={(e) => setBankNote(e.target.value)} placeholder="e.g. BPI · ref 12345" className="w-full rounded border border-input-border bg-input-bg px-1.5 py-0.5 text-xs" />
             </div>
           )}
-          <p className={`text-[10px] ${overAllocated ? 'text-accent-red' : 'text-text-muted'}`}>
-            {overAllocated
-              ? `Over by ${peso(allocated - lineTotal)} — total is ${peso(lineTotal)}`
-              : `Remaining (unspecified): ${peso(Math.max(0, remainder))} of ${peso(lineTotal)}`}
+          <p className={`text-[10px] ${splitMismatch ? 'text-accent-red' : 'text-accent-green'}`}>
+            {remainder > 0.01
+              ? `Remaining to allocate: ${peso(remainder)} of ${peso(lineTotal)}`
+              : remainder < -0.01
+                ? `Over by ${peso(-remainder)} — total is ${peso(lineTotal)}`
+                : `Fully allocated ✓ (${peso(lineTotal)})`}
           </p>
         </div>
       )}
       <div className="flex gap-1.5">
         <button onClick={onCancel} className="flex-1 rounded bg-white/10 px-2 py-1 text-[10px] font-medium text-text-primary hover:bg-white/15">Cancel</button>
-        <button onClick={handleSave} disabled={method === 'Split' && overAllocated} className="flex-1 rounded bg-btn-primary px-2 py-1 text-[10px] font-medium text-btn-primary-text hover:opacity-90 disabled:opacity-50">Save</button>
+        <button onClick={handleSave} disabled={method === 'Split' && splitMismatch} className="flex-1 rounded bg-btn-primary px-2 py-1 text-[10px] font-medium text-btn-primary-text hover:opacity-90 disabled:opacity-50">Save</button>
       </div>
     </div>
   );

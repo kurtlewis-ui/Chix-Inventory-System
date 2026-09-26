@@ -156,7 +156,7 @@ export class SalesService {
     // grossSales − discount. Showing both makes the reduction transparent:
     // Gross − Discount = Net. The discount is only ever subtracted ONCE
     // (gross → net); the cash/gcash buckets already use the net subTotal.
-    const summary = { grossSales: 0, cash: 0, gcash: 0, bankTransfer: 0, cashless: 0, discount: 0, total: 0, count: total };
+    const summary = { grossSales: 0, cash: 0, gcash: 0, bankTransfer: 0, discount: 0, total: 0, count: total };
     for (const item of summaryItems) {
       summary.grossSales += Number(item.unitPrice) * item.quantity;
       // Total Discount is the sum of per-item discounts. This is DISPLAY only:
@@ -166,21 +166,19 @@ export class SalesService {
       summary.discount += Number(item.discount || 0);
       if (item.paymentMethod === 'Split' && item.paymentSplit) {
         const split = item.paymentSplit as unknown as {
-          cash: number; gcash: number; bankTransfer: number; cashless: number;
+          cash: number; gcash: number; bankTransfer: number;
         };
         summary.cash += Number(split.cash || 0);
         summary.gcash += Number(split.gcash || 0);
         summary.bankTransfer += Number(split.bankTransfer || 0);
-        summary.cashless += Number(split.cashless || 0);
       } else {
         const amount = Number(item.subTotal);
         if (item.paymentMethod === 'Cash') summary.cash += amount;
         else if (item.paymentMethod === 'Gcash') summary.gcash += amount;
         else if (item.paymentMethod === 'BankTransfer') summary.bankTransfer += amount;
-        else if (item.paymentMethod === 'Cashless') summary.cashless += amount;
       }
     }
-    summary.total = summary.cash + summary.gcash + summary.bankTransfer + summary.cashless;
+    summary.total = summary.cash + summary.gcash + summary.bankTransfer;
 
     return {
       data: sales.map((s) => this.serialize(s)),
@@ -442,7 +440,7 @@ export class SalesService {
    * of the product's global default.
    */
   private buildSaleItems(
-    dtoItems: { productId: string; quantity: number; discount?: number; paymentMethod: PaymentMethod; bankNote?: string; note?: string; paymentSplit?: { cash: number; gcash: number; bankTransfer: number; cashless: number } }[],
+    dtoItems: { productId: string; quantity: number; discount?: number; paymentMethod: PaymentMethod; bankNote?: string; note?: string; paymentSplit?: { cash: number; gcash: number; bankTransfer: number } }[],
     productMap: Map<string, { id: string; name: string; sellingPrice: Prisma.Decimal; costPrice?: Prisma.Decimal; brand: { name: string } }>,
     branchPriceMap?: Map<string, Prisma.Decimal | null>,
   ) {
@@ -477,12 +475,12 @@ export class SalesService {
 
   /**
    * Validate and normalize one item's payment fields. For Split, the client
-   * supplies cash/gcash/bankTransfer and the remaining cashless amount is
-   * always recomputed server-side as the remainder — never trusted from the
-   * client — so the four buckets can't be made to disagree with subTotal.
+   * supplies cash/gcash/bankTransfer, and the server requires them to add up
+   * exactly to the item's subTotal (no leftover) — so the split can't disagree
+   * with the amount actually owed.
    */
   private resolveItemPayment(
-    item: { paymentMethod: PaymentMethod; bankNote?: string; note?: string; paymentSplit?: { cash: number; gcash: number; bankTransfer: number; cashless: number } },
+    item: { paymentMethod: PaymentMethod; bankNote?: string; note?: string; paymentSplit?: { cash: number; gcash: number; bankTransfer: number } },
     subTotal: Prisma.Decimal,
     label: string,
   ) {
@@ -497,17 +495,18 @@ export class SalesService {
       const gcash = new Prisma.Decimal(s.gcash || 0);
       const bankTransfer = new Prisma.Decimal(s.bankTransfer || 0);
       const allocated = cash.add(gcash).add(bankTransfer);
-      if (allocated.gt(subTotal)) {
+      // A Split must fully allocate across Cash + Gcash + Bank Transfer — no
+      // leftover. (There is no "Cashless" remainder any more.) Allow a 0.01
+      // tolerance for floating-point rounding.
+      if (allocated.sub(subTotal).abs().gt(new Prisma.Decimal('0.01'))) {
         throw new BadRequestException(
-          `Split payment for "${label}" adds up to more than its total (${subTotal.toFixed(2)})`,
+          `Split payment for "${label}" must add up to its total (${subTotal.toFixed(2)}) — Cash + Gcash + Bank Transfer.`,
         );
       }
-      const cashless = subTotal.sub(allocated);
       paymentSplit = {
         cash: cash.toNumber(),
         gcash: gcash.toNumber(),
         bankTransfer: bankTransfer.toNumber(),
-        cashless: cashless.toNumber(),
       };
     }
 

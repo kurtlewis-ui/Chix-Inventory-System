@@ -220,16 +220,16 @@ function AddPurchaseModal({
   const discountTooHigh = discountNumber > lineTotal + 0.001;
   const discountedTotal = Math.max(0, lineTotal - discountNumber);
 
-  // Split allocation across the concrete buckets (cash/gcash/bankTransfer). The
-  // backend treats whatever is left of the line total as the generic "cashless"
-  // remainder, so we don't force the entered buckets to sum to the total — we
-  // just prevent OVER-allocating and surface the remainder to the staff.
+  // Split allocation across the three buckets (cash/gcash/bankTransfer). They
+  // must add up EXACTLY to the line total — there is no leftover bucket. We
+  // surface the remaining amount and block saving until it's fully allocated.
   const splitCashN = Number(splitCash) || 0;
   const splitGcashN = Number(splitGcash) || 0;
   const splitBankN = Number(splitBank) || 0;
   const splitAllocated = splitCashN + splitGcashN + splitBankN;
   const splitRemainder = discountedTotal - splitAllocated;
-  const splitOver = splitAllocated > discountedTotal + 0.001;
+  // Not fully allocated when it's off by more than a cent (over OR under).
+  const splitMismatch = Math.abs(splitRemainder) > 0.01;
 
   function validQty(): number | null {
     const qty = Number(quantity);
@@ -257,8 +257,8 @@ function AddPurchaseModal({
       setError('Discount can\'t be more than this item\'s total.');
       return;
     }
-    if (paymentMethod === 'Split' && splitOver) {
-      setError('Split amounts can\'t exceed the item total.');
+    if (paymentMethod === 'Split' && splitMismatch) {
+      setError('Split amounts must add up to the item total (Cash + Gcash + Bank Transfer).');
       return;
     }
     const usesBank = paymentMethod === 'BankTransfer' || paymentMethod === 'Split';
@@ -278,8 +278,6 @@ function AddPurchaseModal({
                 cash: splitCashN,
                 gcash: splitGcashN,
                 bankTransfer: splitBankN,
-                // Remainder → cashless, mirroring the server.
-                cashless: Math.max(0, splitRemainder),
               }
             : null,
       },
@@ -488,10 +486,12 @@ function AddPurchaseModal({
                     />
                   </div>
                 )}
-                <p className={`text-xs ${splitOver ? 'text-accent-red' : 'text-text-muted'}`}>
-                  {splitOver
-                    ? `Over by ${peso(splitAllocated - discountedTotal)} — item total is ${peso(discountedTotal)}`
-                    : `Remaining (unspecified): ${peso(Math.max(0, splitRemainder))} of ${peso(discountedTotal)}`}
+                <p className={`text-xs ${splitMismatch ? 'text-accent-red' : 'text-accent-green'}`}>
+                  {splitRemainder > 0.01
+                    ? `Remaining to allocate: ${peso(splitRemainder)} of ${peso(discountedTotal)}`
+                    : splitRemainder < -0.01
+                      ? `Over by ${peso(-splitRemainder)} — item total is ${peso(discountedTotal)}`
+                      : `Fully allocated ✓ (${peso(discountedTotal)})`}
                 </p>
               </div>
             )}
