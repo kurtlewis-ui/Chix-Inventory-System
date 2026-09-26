@@ -632,12 +632,10 @@ export default function SalesPendingPage() {
                 <span className="text-text-muted">Gcash</span>
                 <span className="text-text-secondary tabular-nums">{peso(summary.gcash)}</span>
               </div>
-              {summary.bankTransfer > 0 && (
-                <div className="flex items-center justify-between gap-4 pl-3 text-sm">
-                  <span className="text-text-muted">Bank Transfer</span>
-                  <span className="text-text-secondary tabular-nums">{peso(summary.bankTransfer)}</span>
-                </div>
-              )}
+              <div className="flex items-center justify-between gap-4 pl-3 text-sm">
+                <span className="text-text-muted">Bank Transfer</span>
+                <span className="text-text-secondary tabular-nums">{peso(summary.bankTransfer)}</span>
+              </div>
             </div>
           </div>
         </div>
