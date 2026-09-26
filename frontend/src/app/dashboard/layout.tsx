@@ -176,11 +176,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         />
       )}
 
-      {/* Sidebar — always fixed, always dark. Restrained glass: translucent
-          nav tint + blur for depth, keeping the dark black-and-white identity. */}
+      {/* Sidebar — always fixed, deep NAVY BLUE in both themes (solid, so it
+          reads the same over the black dark-mode content and the light-mode
+          content). This is the only always-navy surface; the main content
+          keeps its own theme. */}
       <aside
         ref={navRef}
-        className={`fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col bg-nav-bg/80 backdrop-blur-xl border-r border-nav-border transition-transform duration-200 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col bg-nav-bg border-r border-nav-border transition-transform duration-200 lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -275,7 +277,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             {/* Theme toggle — in-flow so it never overlaps the name/role */}
             <button
               onClick={handleThemeToggle}
-              className="shrink-0 p-1.5 rounded-lg text-[#999999] hover:text-white hover:bg-white/5 transition-colors"
+              className="shrink-0 p-1.5 rounded-lg text-nav-text hover:text-white hover:bg-white/5 transition-colors"
               title={contentTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
               aria-label="Toggle theme"
             >
@@ -287,7 +289,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2 mt-3">
             <Link
               href="/dashboard/settings"
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-[#999999] hover:text-white hover:bg-white/5 transition-colors"
+              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-nav-text hover:text-white hover:bg-white/5 transition-colors"
               title="Settings"
             >
               <Settings size={14} />
@@ -295,7 +297,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </Link>
             <button
               onClick={handleLogout}
-              className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-[#999999] hover:text-[#ef4444] hover:bg-[#ef4444]/10 transition-colors"
+              className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-nav-text hover:text-[#ef4444] hover:bg-[#ef4444]/10 transition-colors"
               title="Logout"
               aria-label="Logout"
             >
@@ -311,7 +313,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 bg-[#141414]/95 backdrop-blur-md border-b border-nav-border lg:hidden">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="flex items-center rounded-lg p-2 text-[#999999] hover:text-white hover:bg-white/5 transition-colors"
+            className="flex items-center rounded-lg p-2 text-nav-text hover:text-white hover:bg-white/5 transition-colors"
             aria-label="Toggle navigation"
           >
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
