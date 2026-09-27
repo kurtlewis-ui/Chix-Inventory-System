@@ -32,7 +32,13 @@ export class DisposalsService {
       throw new NotFoundException('Product not found');
     }
 
-    const unitPrice = new Prisma.Decimal(product.sellingPrice);
+    // A disposal is a loss of what the goods COST us (capital), not their
+    // selling price — you never realized the sale. So value the write-off at
+    // the product's cost price. This snapshots the cost at disposal time onto
+    // the row (unitPrice/value), so later cost changes don't rewrite history.
+    // Every consumer (P&L "Disposal Losses", branch/sales summaries, the
+    // "Most Disposed" chart) reads this stored value, so they all follow.
+    const unitPrice = new Prisma.Decimal(product.costPrice);
     const value = unitPrice.mul(dto.quantity);
 
     const disposal = await this.prisma.$transaction(async (tx) => {
