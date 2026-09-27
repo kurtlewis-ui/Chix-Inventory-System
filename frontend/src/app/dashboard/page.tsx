@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Store, Package, PhilippinePeso, Users, BarChart3, ChevronDown, ChevronUp, Recycle, Download } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { useDashboardStats, useSalesOverview, useTopProducts, useBranches, useDisposals } from '@/lib/hooks';
+import { useDashboardStats, useSalesOverview, useProfitOverview, useTopProducts, useBranches, useDisposals } from '@/lib/hooks';
 import { useThemeStore } from '@/lib/theme';
 import { useAuthStore } from '@/lib/store';
 import { OwnerProfitSection } from '@/components/OwnerProfitSection';
@@ -65,7 +65,18 @@ function OwnerDashboard({ isOwner }: { isOwner: boolean }) {
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportStatus, setExportStatus] = useState('');
 
-  const { data: overview = [], isLoading: ovLoading, isError: ovError } = useSalesOverview(period, overviewShop || undefined);
+  // Sales Overview chart source depends on role:
+  //   Owner → NET PROFIT per period (same formula as the Profit & Loss board):
+  //           revenue − capital − expenses − disposal losses. Uses the
+  //           Owner-only /stats/profit-overview endpoint (reads cost price).
+  //   Admin → NET SALES per period (cost-free /stats/sales-overview), unchanged.
+  // Only the hook matching the current role is enabled, so Admin never calls
+  // the Owner-only endpoint (which would 403).
+  const salesOv = useSalesOverview(period, overviewShop || undefined, !isOwner);
+  const profitOv = useProfitOverview(period, overviewShop || undefined, isOwner);
+  const overview = (isOwner ? profitOv.data : salesOv.data) ?? [];
+  const ovLoading = isOwner ? profitOv.isLoading : salesOv.isLoading;
+  const ovError = isOwner ? profitOv.isError : salesOv.isError;
   const { data: topProducts = [], isLoading: tpLoading, isError: tpError } = useTopProducts(topShop || undefined);
 
   // Disposals data for "Most Disposed Products" chart
@@ -165,7 +176,7 @@ function OwnerDashboard({ isOwner }: { isOwner: boolean }) {
       {/* Sales Overview */}
       <div className="bg-card-bg border border-card-border rounded-xl p-6 shadow-sm shadow-black/20">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h2 className="text-lg font-bold text-text-primary">Sales Overview</h2>
+          <h2 className="text-lg font-bold text-text-primary">{isOwner ? 'Net Profit Overview' : 'Sales Overview'}</h2>
           <div className="flex flex-wrap items-center gap-2">
             <Select value={period} onChange={setPeriod} ariaLabel="Period" className="w-auto min-w-[120px]" options={[
               { value: 'daily', label: 'Daily' },
@@ -182,7 +193,7 @@ function OwnerDashboard({ isOwner }: { isOwner: boolean }) {
         ) : overviewData.length === 0 ? (
           <ChartPlaceholder message="No approved sales in this period yet" />
         ) : (
-          <SalesOverviewChart data={overviewData} isDark={isDark} />
+          <SalesOverviewChart data={overviewData} isDark={isDark} seriesName={isOwner ? 'Net Profit' : 'Sales'} />
         )}
       </div>
 

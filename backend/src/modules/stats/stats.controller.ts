@@ -36,6 +36,21 @@ export class StatsController {
     return { success: true, data };
   }
 
+  // Owner-ONLY. NET PROFIT bucketed over time (same formula as the Profit &
+  // Loss board: revenue − capital − expenses − disposal losses). It reads
+  // confidential cost prices, so Admin/Staff must never see it — Admin's
+  // Sales Overview stays on the cost-free /stats/sales-overview above.
+  @Get('profit-overview')
+  @Roles('Owner')
+  @ApiOperation({ summary: 'Owner-only Net Profit over time (matches Profit & Loss)' })
+  async profitOverview(
+    @Query('period') period = 'daily',
+    @Query('branchId') branchId?: string,
+  ) {
+    const data = await this.statsService.profitOverview(period, branchId || undefined);
+    return { success: true, data };
+  }
+
   @Get('top-products')
   @Roles('Owner', 'Admin')
   @ApiOperation({ summary: 'Top selling products by units' })

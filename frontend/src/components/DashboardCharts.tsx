@@ -37,7 +37,7 @@ const tooltipStyle = (isDark: boolean, border?: string) => ({
   boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
 });
 
-export function SalesOverviewChart({ data, isDark }: { data: { label: string; total: number }[]; isDark: boolean }) {
+export function SalesOverviewChart({ data, isDark, seriesName = 'Sales' }: { data: { label: string; total: number }[]; isDark: boolean; seriesName?: string }) {
   // Colorful multi-hue gradient (was a single amber tone). The line and its
   // fill now flow through the full dashboard palette left→right, so the chart
   // is vibrant and matches the donut/bar charts' colors. Dark uses brighter
@@ -71,7 +71,7 @@ export function SalesOverviewChart({ data, isDark }: { data: { label: string; to
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: isDark ? '#8b8b8b' : '#888888' }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fontSize: 11, fill: isDark ? '#8b8b8b' : '#888888' }} tickFormatter={(n: any) => peso(Number(n))} width={70} axisLine={false} tickLine={false} />
         <Tooltip formatter={(val: any) => peso(Number(val))} contentStyle={tooltipStyle(isDark)} cursor={{ stroke: accent, strokeWidth: 1, strokeDasharray: '4 4' }} />
-        <Area type="monotone" dataKey="total" stroke="url(#salesLineGrad)" fill="url(#salesFillGrad)" strokeWidth={3} name="Sales" dot={false} activeDot={{ r: 5, fill: accent, stroke: isDark ? '#0f0f0f' : '#ffffff', strokeWidth: 2 }} />
+        <Area type="monotone" dataKey="total" stroke="url(#salesLineGrad)" fill="url(#salesFillGrad)" strokeWidth={3} name={seriesName} dot={false} activeDot={{ r: 5, fill: accent, stroke: isDark ? '#0f0f0f' : '#ffffff', strokeWidth: 2 }} />
       </AreaChart>
     </ResponsiveContainer>
   );

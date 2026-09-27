@@ -110,6 +110,106 @@ export class StatsService {
   }
 
   /**
+   * Owner-only NET PROFIT bucketed over time, for the Owner's Sales Overview
+   * chart. Each period's plotted value uses the SAME formula as the Profit &
+   * Loss board (profitSummary), just computed per time bucket:
+   *
+   *   netProfit = revenue − capital − expenses − disposalLosses
+   *     revenue        = Σ SaleItem.subTotal            (net of discount)
+   *     capital (COGS) = Σ (SaleItem.costPrice × qty)   (cost of goods SOLD)
+   *     expenses       = Σ Expense.amount   (APPROVED)
+   *     disposalLosses = Σ Disposal.value   (APPROVED)
+   *
+   * This reads SaleItem.costPrice, which is Owner-confidential — hence the
+   * endpoint is Owner-ONLY (see stats.controller). Admin keeps salesOverview
+   * (net sales, no cost). Bucketing (period → unit + lookback window) and the
+   * PH business-clock truncation exactly mirror salesOverview so the two
+   * series line up on the same time axis.
+   */
+  async profitOverview(period: string, branchId?: string) {
+    // Same whitelist mapping as salesOverview — `unit` is never user input.
+    let unit: 'day' | 'week' | 'month' | 'year';
+    let sinceDays: number | null;
+    switch (period) {
+      case 'monthly': unit = 'month'; sinceDays = 365; break;
+      case 'weekly': unit = 'week'; sinceDays = 84; break;
+      case 'yearly': unit = 'year'; sinceDays = null; break;
+      case 'all': unit = 'month'; sinceDays = null; break;
+      default: unit = 'day'; sinceDays = 14; break;
+    }
+
+    // $1 (when present) is the branchId, referenced as $1::uuid in every CTE
+    // via branchFor() below.
+    const params: any[] = [];
+    if (branchId) {
+      params.push(branchId);
+    }
+
+    // Bucket every source table on the same PH business clock, then shift the
+    // truncated instant back to a real UTC bucket label (identical to
+    // salesOverview). Build the bucket expression per table so each references
+    // the correctly-qualified created_at column (the revenue CTE joins sales,
+    // so it must qualify with the `s.` alias).
+    const bucketFor = (col: string) =>
+      `(date_trunc('${unit}', ${phBusinessClockSql(col)}) - interval '8 hours' + interval '2 hours')`;
+    // Per-table since/branch filters, with the column qualified as needed.
+    const sinceFor = (col: string) =>
+      sinceDays !== null ? ` AND ${col} >= now() - interval '${sinceDays} days'` : '';
+    const branchFor = (col: string) =>
+      branchId ? ` AND ${col} = $1::uuid` : '';
+
+    // revenue (net) and capital (Σ cost×qty) per bucket, from approved sales'
+    // items. sale_items join sales to inherit each sale's created_at/branch.
+    const revenueCte =
+      `rev AS (` +
+      `SELECT ${bucketFor('s.created_at')} AS bucket, ` +
+      `COALESCE(SUM(si.sub_total), 0) AS revenue, ` +
+      `COALESCE(SUM(si.cost_price * si.quantity), 0) AS capital ` +
+      `FROM sale_items si JOIN sales s ON s.id = si.sale_id ` +
+      `WHERE s.status = 'APPROVED'${sinceFor('s.created_at')}${branchFor('s.branch_id')} ` +
+      `GROUP BY 1)`;
+
+    // expenses per bucket (approved).
+    const expenseCte =
+      `exp AS (` +
+      `SELECT ${bucketFor('created_at')} AS bucket, COALESCE(SUM(amount), 0) AS expenses ` +
+      `FROM expenses WHERE status = 'APPROVED'${sinceFor('created_at')}${branchFor('branch_id')} ` +
+      `GROUP BY 1)`;
+
+    // disposal losses per bucket (approved) — value is cost-based going forward.
+    const disposalCte =
+      `disp AS (` +
+      `SELECT ${bucketFor('created_at')} AS bucket, COALESCE(SUM(value), 0) AS disposal_losses ` +
+      `FROM disposals WHERE status = 'APPROVED'${sinceFor('created_at')}${branchFor('branch_id')} ` +
+      `GROUP BY 1)`;
+
+    // FULL OUTER JOIN the three per-bucket CTEs so a bucket with only an
+    // expense/disposal (and no sale) still appears, then net them.
+    const sql =
+      `WITH ${revenueCte}, ${expenseCte}, ${disposalCte} ` +
+      `SELECT b.bucket AS bucket, ` +
+      `COALESCE(rev.revenue, 0) - COALESCE(rev.capital, 0) ` +
+      `- COALESCE(exp.expenses, 0) - COALESCE(disp.disposal_losses, 0) AS total ` +
+      `FROM (` +
+      `SELECT bucket FROM rev UNION SELECT bucket FROM exp UNION SELECT bucket FROM disp` +
+      `) b ` +
+      `LEFT JOIN rev ON rev.bucket = b.bucket ` +
+      `LEFT JOIN exp ON exp.bucket = b.bucket ` +
+      `LEFT JOIN disp ON disp.bucket = b.bucket ` +
+      `ORDER BY b.bucket ASC`;
+
+    const rows = await this.prisma.$queryRawUnsafe<
+      { bucket: Date; total: any }[]
+    >(sql, ...params);
+
+    return rows.map((r) => ({
+      date: r.bucket,
+      total: Number(r.total),
+      count: 0,
+    }));
+  }
+
+  /**
    * Top selling products (by units) from approved sales.
    */
   async topProducts(branchId?: string) {
