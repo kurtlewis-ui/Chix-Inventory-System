@@ -863,10 +863,23 @@ export function useActivityLogs(params?: { search?: string; category?: string; s
   });
 }
 
-export function useSalesOverview(period: string, branchId?: string) {
+export function useSalesOverview(period: string, branchId?: string, enabled = true) {
   return useQuery({
     queryKey: ['stats', 'sales-overview', { period, branchId }],
     queryFn: () => getData<SalesOverviewPoint[]>('/stats/sales-overview', { period, branchId: branchId || undefined }),
+    enabled,
+  });
+}
+
+// Owner-only NET PROFIT over time — same shape as sales-overview, but each
+// point is Net Profit (revenue − capital − expenses − disposal losses), i.e.
+// the Profit & Loss formula per period. Reads confidential cost, so it's
+// gated to the Owner via `enabled` (the endpoint is Owner-only server-side).
+export function useProfitOverview(period: string, branchId?: string, enabled = true) {
+  return useQuery({
+    queryKey: ['stats', 'profit-overview', { period, branchId }],
+    queryFn: () => getData<SalesOverviewPoint[]>('/stats/profit-overview', { period, branchId: branchId || undefined }),
+    enabled,
   });
 }
 
