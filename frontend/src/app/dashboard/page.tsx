@@ -33,8 +33,8 @@ function peso(n: number) {
 // Chart palettes — amber-led and intentionally GREEN-FREE (green now reads as
 // a "positive/sales" semantic elsewhere, so charts use a distinct set). Same
 // hue order in both themes; dark uses slightly brighter tones for the black bg.
-const DONUT_COLORS_DARK = ['#fbbf24', '#60a5fa', '#a78bfa', '#22d3ee', '#f472b6', '#f87171', '#e879f9', '#fb923c'];
-const DONUT_COLORS_LIGHT = ['#f59e0b', '#3b82f6', '#8b5cf6', '#06b6d4', '#ec4899', '#ef4444', '#d946ef', '#f97316'];
+const DONUT_COLORS_DARK = ['#f87171', '#fb923c', '#fbbf24', '#4ade80', '#22d3ee', '#60a5fa', '#a78bfa', '#f472b6', '#e879f9', '#2dd4bf'];
+const DONUT_COLORS_LIGHT = ['#ef4444', '#f97316', '#f59e0b', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#d946ef', '#14b8a6'];
 
 export default function DashboardPage() {
   const currentRole = useAuthStore((s) => s.user?.role?.name);
