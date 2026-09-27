@@ -25,6 +25,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:migrate:deploy:retry": "node scripts/migrate-with-retry.js",
     "prisma:studio": "prisma studio",
+    "reset:sales": "ts-node scripts/reset-sales.ts",
     "prisma:seed": "ts-node prisma/seed.ts",
     "db:seed": "ts-node prisma/seed.ts",
     "migrate:images-to-cloudinary": "ts-node prisma/migrate-images-to-cloudinary.ts"
