@@ -248,7 +248,8 @@ export interface BranchSummary {
   totalGrossSales: number; // before discount (= totalSales + totalDiscount)
   totalSales: number; // NET sales (after discount)
   totalExpenses: number;
-  totalDisposals: number;
+  totalDisposals: number; // cost-based (Owner P&L)
+  totalDisposalsSelling: number; // selling-price valuation (Admin Today strip)
   totalDiscount: number; // Gross − Discount = Net; subtracted once
   // Today's approved sales split by concrete payment method (Split items
   // apportioned across buckets). Used by the Pending "Today (Approved)" strip.

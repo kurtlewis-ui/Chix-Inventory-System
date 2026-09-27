@@ -245,7 +245,7 @@ export class StatsService {
     // previous day until the clock passes 2 AM.
     const start = startOfBusinessDay();
 
-    const [salesAgg, expensesAgg, disposalsAgg, discountAgg, paymentItems] = await Promise.all([
+    const [salesAgg, expensesAgg, disposalsAgg, discountAgg, paymentItems, disposalRows] = await Promise.all([
       this.prisma.sale.aggregate({
         where: { branchId: resolvedBranchId, status: SaleStatus.APPROVED, decidedAt: { gte: start } },
         _sum: { total: true },
@@ -288,7 +288,43 @@ export class StatsService {
         },
         select: { paymentMethod: true, subTotal: true, paymentSplit: true },
       }),
+      // Today's approved disposal rows (productId + qty) so we can also value
+      // them at the product's SELLING price — the Admin's Today strip shows
+      // disposals at selling price, while Disposal.value stays cost-based for
+      // the Owner's P&L. Uses the product's CURRENT selling price.
+      this.prisma.disposal.findMany({
+        where: {
+          branchId: resolvedBranchId,
+          status: DisposalStatus.APPROVED,
+          decidedAt: { gte: start },
+        },
+        select: { productId: true, quantity: true },
+      }),
     ]);
+
+    // Value today's disposals at the products' CURRENT selling price for the
+    // Admin Today strip (totalDisposals below stays cost-based for the Owner).
+    // Look up selling prices for the disposed products in one query, then sum
+    // sellingPrice × quantity. Disposals of a deleted product (productId null)
+    // contribute 0 to this selling-price figure.
+    const disposalProductIds = Array.from(
+      new Set(disposalRows.map((d) => d.productId).filter((id): id is string => !!id)),
+    );
+    const disposalProducts = disposalProductIds.length
+      ? await this.prisma.product.findMany({
+          where: { id: { in: disposalProductIds } },
+          select: { id: true, sellingPrice: true },
+        })
+      : [];
+    const sellingPriceById = new Map(
+      disposalProducts.map((p) => [p.id, Number(p.sellingPrice)]),
+    );
+    let totalDisposalsSelling = 0;
+    for (const d of disposalRows) {
+      if (d.productId && sellingPriceById.has(d.productId)) {
+        totalDisposalsSelling += sellingPriceById.get(d.productId)! * d.quantity;
+      }
+    }
 
     // `totalSales` here is the NET (Σ Sale.total, already after discount).
     const totalSales = Number(salesAgg._sum.total ?? 0);
@@ -326,6 +362,9 @@ export class StatsService {
       totalSales,
       totalExpenses,
       totalDisposals,
+      // Selling-price valuation of today's disposals — used by the Admin Today
+      // strip only. `totalDisposals` above stays cost-based (Owner P&L).
+      totalDisposalsSelling,
       totalDiscount,
       cash,
       gcash,

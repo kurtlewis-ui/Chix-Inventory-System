@@ -66,7 +66,7 @@ const ownerNavItems: NavItem[] = [
 // sales, disposals and expenses, plus managing Staff accounts + branch
 // assignments. Cost-derived pages (Profit & Loss) and Archive are omitted.
 const adminNavItems: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={18} /> },
+  // Admin has NO Dashboard page (removed) — Admin lands on Sales → Pending.
   { label: 'Shops', href: '/dashboard/shops', icon: <Store size={18} /> },
   { label: 'Brands', href: '/dashboard/brands', icon: <Tag size={18} /> },
   { label: 'Products', href: '/dashboard/products', icon: <Package size={18} /> },
@@ -74,10 +74,10 @@ const adminNavItems: NavItem[] = [
     label: 'Sales',
     href: '/dashboard/sales',
     icon: <PhilippinePeso size={18} />,
+    // No Disposals sub-item for Admin — that page is removed for Admin.
     dropdown: [
       { label: 'Records', href: '/dashboard/sales/records' },
       { label: 'Pending', href: '/dashboard/sales/pending' },
-      { label: 'Disposals', href: '/dashboard/sales/disposals' },
     ],
   },
   { label: 'Staff', href: '/dashboard/users', icon: <Users size={18} /> },

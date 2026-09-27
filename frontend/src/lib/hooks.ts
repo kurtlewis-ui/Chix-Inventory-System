@@ -781,11 +781,12 @@ export function useMyDraftExists() {
 
 // Admin: poll every staff member's current draft cart, optionally scoped to
 // a branch. Short interval so it feels close to live on the Pending Sales page.
-export function useStaffDrafts(branchId?: string) {
+export function useStaffDrafts(branchId?: string, enabled = true) {
   return useQuery({
     queryKey: ['staff-drafts', { branchId }],
     queryFn: () => getData<StaffDraft[]>('/sales/drafts', { branchId: branchId || undefined }),
     refetchInterval: shouldPollSlow,
+    enabled,
   });
 }
 
@@ -961,7 +962,7 @@ export function useCreateDisposal() {
   });
 }
 
-export function useDisposalsPending(params?: { search?: string; branchId?: string }) {
+export function useDisposalsPending(params?: { search?: string; branchId?: string }, enabled = true) {
   return useQuery({
     queryKey: ['disposals', 'pending', params ?? {}],
     queryFn: async () => {
@@ -978,6 +979,7 @@ export function useDisposalsPending(params?: { search?: string; branchId?: strin
       };
     },
     refetchInterval: shouldPollSlow,
+    enabled,
   });
 }
 
@@ -1044,7 +1046,7 @@ export function useExpenses(params?: {
   });
 }
 
-export function useExpensesPending(params?: { search?: string; branchId?: string }) {
+export function useExpensesPending(params?: { search?: string; branchId?: string }, enabled = true) {
   return useQuery({
     queryKey: ['expenses', 'pending', params ?? {}],
     queryFn: async () => {
@@ -1061,6 +1063,7 @@ export function useExpensesPending(params?: { search?: string; branchId?: string
       };
     },
     refetchInterval: shouldPollSlow,
+    enabled,
   });
 }
 

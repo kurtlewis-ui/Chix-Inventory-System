@@ -41,7 +41,16 @@ export default function LoginPage() {
 
       const { accessToken, user } = response.data.data;
       setAuth(accessToken, user);
-      router.replace(user.role?.name === 'Staff' ? '/staff' : '/dashboard');
+      // Landing route by role: Staff → their portal; Admin → Sales/Pending
+      // (Admin has no Dashboard page); Owner → Dashboard.
+      const role = user.role?.name;
+      const landing =
+        role === 'Staff'
+          ? '/staff'
+          : role === 'Admin'
+            ? '/dashboard/sales/pending'
+            : '/dashboard';
+      router.replace(landing);
     } catch (err) {
       // Show a single, generic, professional message for any bad-credentials
       // response (wrong email OR wrong password — the backend deliberately

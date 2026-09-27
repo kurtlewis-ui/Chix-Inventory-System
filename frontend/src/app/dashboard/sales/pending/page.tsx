@@ -246,31 +246,34 @@ export default function SalesPendingPage() {
   // Admin may approve/decline pending sales but must NOT edit them (the backend
   // rejects Admin edits too). Only the Owner sees the Edit control here.
   const canEditSale = useAuthStore((s) => s.user?.role?.name === 'Owner');
+  // Admin: no Net in the Today strip, and disposals shown at selling price.
+  const isAdmin = useAuthStore((s) => s.user?.role?.name === 'Admin');
 
   const approveSale = useApproveSale();
   const declineSale = useDeclineSale();
   const updateSale = useUpdateSale();
 
-  // Pending disposals (admin approves/declines these too) — live.
+  // Pending disposals — the section is hidden for Admin, so skip the query too.
   const { data: disposalData, isLoading: dispLoading } = useDisposalsPending({
     search,
     branchId: selectedShop || undefined,
-  });
+  }, !isAdmin);
   const disposals = disposalData?.data ?? [];
   const approveDisposal = useApproveDisposal();
   const declineDisposal = useDeclineDisposal();
 
-  // Pending expenses — live.
+  // Pending expenses — the section is hidden for Admin, so skip the query too.
   const { data: expenseData, isLoading: expLoading } = useExpensesPending({
     search,
     branchId: selectedShop || undefined,
-  });
+  }, !isAdmin);
   const expenses = expenseData?.data ?? [];
   const approveExpense = useApproveExpense();
   const declineExpense = useDeclineExpense();
 
-  // Staff draft carts (not yet submitted) — live view for admins.
-  const { data: draftsData, isLoading: draftsLoading } = useStaffDrafts(selectedShop || undefined);
+  // Staff draft carts (not yet submitted). Section is hidden for Admin, so
+  // skip the polling query too.
+  const { data: draftsData, isLoading: draftsLoading } = useStaffDrafts(selectedShop || undefined, !isAdmin);
   const drafts = draftsData ?? [];
   const saveDraftForStaff = useSaveDraftForStaff();
   const clearStaffDraft = useClearStaffDraft();
@@ -431,7 +434,9 @@ export default function SalesPendingPage() {
         <div className="bg-card-bg rounded-xl border border-card-border shadow-sm mb-4">
           <div className="p-4">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">Today (Approved)</p>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+            {/* Admin: 4 columns (no Net) and disposals valued at selling price.
+                Owner: 5 columns incl. Net, disposals at cost (Disposal Losses). */}
+            <div className={`grid grid-cols-2 ${isAdmin ? 'sm:grid-cols-4' : 'sm:grid-cols-5'} gap-3 text-center`}>
               <div>
                 <p className="text-xs text-text-secondary">Total Gross Sales</p>
                 <p className="text-lg font-bold tabular-nums break-words" style={{ color: '#10b981' }}>{peso(branchSummary.totalGrossSales)}</p>
@@ -446,12 +451,14 @@ export default function SalesPendingPage() {
               </div>
               <div>
                 <p className="text-xs text-text-secondary">Total Disposals</p>
-                <p className="text-lg font-bold tabular-nums break-words" style={{ color: '#f97316' }}>{peso(branchSummary.totalDisposals)}</p>
+                <p className="text-lg font-bold tabular-nums break-words" style={{ color: '#f97316' }}>{peso(isAdmin ? branchSummary.totalDisposalsSelling : branchSummary.totalDisposals)}</p>
               </div>
-              <div>
-                <p className="text-xs text-text-secondary">Net</p>
-                <p className="text-lg font-bold tabular-nums break-words" style={{ color: branchSummary.net >= 0 ? '#3b82f6' : '#ef4444' }}>{peso(branchSummary.net)}</p>
-              </div>
+              {!isAdmin && (
+                <div>
+                  <p className="text-xs text-text-secondary">Net</p>
+                  <p className="text-lg font-bold tabular-nums break-words" style={{ color: branchSummary.net >= 0 ? '#3b82f6' : '#ef4444' }}>{peso(branchSummary.net)}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -625,6 +632,10 @@ export default function SalesPendingPage() {
         </div>
       </div>
 
+      {/* Staff Drafts, Pending Disposals and Pending Expenses are hidden for
+          Admin (their queries are also disabled above). Owner sees all three. */}
+      {!isAdmin && (
+        <>
       {/* Staff Drafts (in-progress carts, not yet submitted) */}
       <div className="bg-card-bg rounded-xl border border-card-border shadow-sm mt-8">
         <div className="flex flex-col gap-3 p-5 border-b border-card-border sm:flex-row sm:items-center sm:justify-between">
@@ -1075,6 +1086,8 @@ export default function SalesPendingPage() {
           </div>
         </div>
       </div>
+        </>
+      )}
 
       {editingSale && (
         <EditSaleModal

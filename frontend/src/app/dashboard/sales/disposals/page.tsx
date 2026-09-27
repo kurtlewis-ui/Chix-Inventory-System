@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, Plus, X, Loader2 } from 'lucide-react';
 import { useDisposals, useCreateDisposal, useBranches, useProducts } from '@/lib/hooks';
+import { useAuthStore } from '@/lib/store';
 import { getApiErrorMessage } from '@/lib/api';
 import { usePagination, Pagination } from '@/components/Pagination';
 import { Select } from '@/components/Select';
@@ -18,6 +20,14 @@ function formatDate(iso: string) {
 }
 
 export default function DisposalsPage() {
+  // The Disposals page is removed for Admin — redirect them to their landing
+  // page if they reach this route directly. (Owner keeps full access.)
+  const isAdmin = useAuthStore((s) => s.user?.role?.name === 'Admin');
+  const router = useRouter();
+  useEffect(() => {
+    if (isAdmin) router.replace('/dashboard/sales/pending');
+  }, [isAdmin, router]);
+
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -39,6 +49,9 @@ export default function DisposalsPage() {
     count: disposals.length,
   };
   const { pageItems: pagedDisposals, resetPage, controlProps } = usePagination(disposals, 10);
+
+  // Admin is redirected away (above) — render nothing while that happens.
+  if (isAdmin) return null;
 
   return (
     <div className="p-6 bg-page-bg min-h-screen">
