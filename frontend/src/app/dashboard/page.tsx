@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Store, Package, PhilippinePeso, Users, BarChart3, ChevronDown, ChevronUp, Recycle, Download } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useDashboardStats, useSalesOverview, useProfitOverview, useTopProducts, useBranches, useDisposals } from '@/lib/hooks';
@@ -38,9 +39,16 @@ const DONUT_COLORS_LIGHT = ['#ef4444', '#f97316', '#f59e0b', '#22c55e', '#06b6d4
 
 export default function DashboardPage() {
   const currentRole = useAuthStore((s) => s.user?.role?.name);
-  // Owner and Admin both see the dashboard. Admin sees the same overview but
-  // WITHOUT the Profit & Loss section (which is derived from confidential cost
-  // prices). The flag is passed down so the cost-bearing section is omitted.
+  const router = useRouter();
+  // The Dashboard is Owner-only. Admin has no Dashboard page — if they reach
+  // /dashboard directly (bookmark/old link), send them to their landing page.
+  const isAdmin = currentRole === 'Admin';
+  useEffect(() => {
+    if (isAdmin) router.replace('/dashboard/sales/pending');
+  }, [isAdmin, router]);
+  if (isAdmin) return null;
+
+  // Only the Owner renders the dashboard now.
   const isOwner = currentRole === 'Owner';
 
   return <OwnerDashboard isOwner={isOwner} />;

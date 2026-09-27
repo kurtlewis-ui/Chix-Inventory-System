@@ -3,6 +3,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Search, Loader2 } from 'lucide-react';
 import { useSalesRecords, useBranches, useBranchSummary } from '@/lib/hooks';
+import { useAuthStore } from '@/lib/store';
 import { filterSalesByProduct } from '@/lib/sale-search';
 import { getApiErrorMessage } from '@/lib/api';
 import { usePagination, Pagination } from '@/components/Pagination';
@@ -71,6 +72,8 @@ export default function SalesRecordsPage() {
   // table above is filtered to. Only meaningful for one shop at a time, so
   // it's skipped entirely while "All Shops" is selected.
   const { data: branchSummary } = useBranchSummary(selectedShop || undefined, { enabled: !!selectedShop });
+  // Admin: no Net in the Today strip, and disposals shown at selling price.
+  const isAdmin = useAuthStore((s) => s.user?.role?.name === 'Admin');
 
   const clearFilters = () => {
     setSelectedShop('');
@@ -105,7 +108,9 @@ export default function SalesRecordsPage() {
         <div className="bg-card-bg rounded-xl border border-card-border shadow-sm mb-4">
           <div className="p-4">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">Today (Approved)</p>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+            {/* Admin: 4 columns (no Net) and disposals valued at selling price.
+                Owner: 5 columns incl. Net, disposals at cost (Disposal Losses). */}
+            <div className={`grid grid-cols-2 ${isAdmin ? 'sm:grid-cols-4' : 'sm:grid-cols-5'} gap-3 text-center`}>
               <div>
                 <p className="text-xs text-text-secondary">Total Gross Sales</p>
                 <p className="text-lg font-bold tabular-nums break-words" style={{ color: '#10b981' }}>{peso(branchSummary.totalGrossSales)}</p>
@@ -120,12 +125,14 @@ export default function SalesRecordsPage() {
               </div>
               <div>
                 <p className="text-xs text-text-secondary">Total Disposals</p>
-                <p className="text-lg font-bold tabular-nums break-words" style={{ color: '#f97316' }}>{peso(branchSummary.totalDisposals)}</p>
+                <p className="text-lg font-bold tabular-nums break-words" style={{ color: '#f97316' }}>{peso(isAdmin ? branchSummary.totalDisposalsSelling : branchSummary.totalDisposals)}</p>
               </div>
-              <div>
-                <p className="text-xs text-text-secondary">Net</p>
-                <p className="text-lg font-bold tabular-nums break-words" style={{ color: branchSummary.net >= 0 ? '#3b82f6' : '#ef4444' }}>{peso(branchSummary.net)}</p>
-              </div>
+              {!isAdmin && (
+                <div>
+                  <p className="text-xs text-text-secondary">Net</p>
+                  <p className="text-lg font-bold tabular-nums break-words" style={{ color: branchSummary.net >= 0 ? '#3b82f6' : '#ef4444' }}>{peso(branchSummary.net)}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
