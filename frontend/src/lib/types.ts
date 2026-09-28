@@ -332,6 +332,7 @@ export interface Disposal {
   reason: string | null;
   status: 'PENDING' | 'APPROVED' | 'DECLINED';
   createdBy: string;
+  createdById: string | null; // creator's user id (for own-only gating)
   decidedBy: string | null;
   decidedAt: string | null;
   createdAt: string;

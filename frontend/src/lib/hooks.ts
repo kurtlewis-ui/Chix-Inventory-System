@@ -1007,6 +1007,18 @@ export function useDeclineDisposal() {
   });
 }
 
+export function useDeleteDisposal() {
+  const invalidate = useInvalidate();
+  const t = useMutationToasts('Disposal deleted');
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/disposals/${id}`).then((r) => r.data.data),
+    // Deleting a pending disposal restores (increments) reserved stock — refresh
+    // products + stats too, like decline does.
+    onSuccess: () => { invalidate(['disposals'], ['products'], ['stats']); t.onSuccess(); },
+    onError: t.onError,
+  });
+}
+
 // ===========================================================================
 // EXPENSES
 // ===========================================================================
@@ -1086,6 +1098,18 @@ export function useDeclineExpense() {
   return useMutation({
     mutationFn: (id: string) => api.post(`/expenses/${id}/decline`).then((r) => r.data.data),
     onSuccess: () => { invalidate(['expenses']); t.onSuccess(); },
+    onError: t.onError,
+  });
+}
+
+export function useDeleteExpense() {
+  const invalidate = useInvalidate();
+  const t = useMutationToasts('Expense deleted');
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/expenses/${id}`).then((r) => r.data.data),
+    // Expenses have no stock impact, but their totals show on the dashboard —
+    // refresh stats alongside the expenses list.
+    onSuccess: () => { invalidate(['expenses'], ['stats']); t.onSuccess(); },
     onError: t.onError,
   });
 }
