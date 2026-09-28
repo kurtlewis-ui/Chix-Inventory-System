@@ -657,7 +657,10 @@ export function useUpdateSale() {
   return useMutation({
     mutationFn: ({ id, ...body }: { id: string } & Partial<SaleCreateInput>) =>
       api.patch(`/sales/${id}`, body).then((r) => r.data.data),
-    onSuccess: () => { invalidate(['sales']); t.onSuccess(); },
+    // Editing a pending sale's items releases the old reserved stock and
+    // reserves the new quantities server-side, so product stock and dashboard
+    // stats change too — refresh all three, like decline/delete do.
+    onSuccess: () => { invalidate(['sales'], ['products'], ['stats']); t.onSuccess(); },
     onError: t.onError,
   });
 }
