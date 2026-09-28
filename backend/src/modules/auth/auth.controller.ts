@@ -43,18 +43,29 @@ export class AuthController {
    */
   private refreshCookieOptions() {
     const isProd = process.env.NODE_ENV === 'production';
-    const sameSite = (process.env.COOKIE_SAMESITE?.toLowerCase() as
-      | 'none'
-      | 'lax'
-      | 'strict'
-      | undefined) ?? (isProd ? 'none' : 'lax');
+
+    // Read + sanitise COOKIE_SAMESITE. We TRIM and lower-case it, then only
+    // accept the three values Express/browsers allow. Anything else (including
+    // an accidental trailing newline/whitespace from pasting the env var, which
+    // previously threw "TypeError: option sameSite is invalid" and 500'd login)
+    // falls back to a safe default instead of crashing.
+    const rawSameSite = process.env.COOKIE_SAMESITE?.trim().toLowerCase();
+    const sameSite: 'none' | 'lax' | 'strict' =
+      rawSameSite === 'none' || rawSameSite === 'lax' || rawSameSite === 'strict'
+        ? rawSameSite
+        : isProd
+          ? 'none'
+          : 'lax';
+
     // Browsers REQUIRE Secure when SameSite=None. Also secure by default in prod.
+    const rawSecure = process.env.COOKIE_SECURE?.trim().toLowerCase();
     const secure =
       sameSite === 'none'
         ? true
-        : process.env.COOKIE_SECURE
-          ? process.env.COOKIE_SECURE === 'true'
+        : rawSecure
+          ? rawSecure === 'true'
           : isProd;
+
     return {
       httpOnly: true as const,
       secure,

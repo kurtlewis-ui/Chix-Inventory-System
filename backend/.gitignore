@@ -45,3 +45,7 @@ prisma/migrations/*_migration/
 # Build
 dist/
 build/
+
+
+# Vercel local dir
+.vercel
