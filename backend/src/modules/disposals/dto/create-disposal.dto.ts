@@ -30,4 +30,12 @@ export class CreateDisposalDto {
   @IsString()
   @MaxLength(500)
   reason?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'ISO timestamp of when this disposal was originally added to the draft cart.',
+  })
+  @IsOptional()
+  @IsString()
+  addedAt?: string;
 }

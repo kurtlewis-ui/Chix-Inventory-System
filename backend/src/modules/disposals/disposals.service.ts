@@ -56,6 +56,9 @@ export class DisposalsService {
           reason: dto.reason?.trim() || null,
           status: DisposalStatus.PENDING,
           createdById: actor.userId,
+          // Original draft add-time (null when not from a draft; UI falls back
+          // to createdAt).
+          addedAt: dto.addedAt ? new Date(dto.addedAt) : null,
         },
         include: this.includeFull(),
       });
@@ -403,6 +406,8 @@ export class DisposalsService {
         : null,
       decidedAt: d.decidedAt,
       createdAt: d.createdAt,
+      // Original draft add-time; falls back to createdAt for pre-feature rows.
+      addedAt: d.addedAt ?? d.createdAt,
     };
   }
 }

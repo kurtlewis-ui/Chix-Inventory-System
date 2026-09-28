@@ -440,7 +440,7 @@ export class SalesService {
    * of the product's global default.
    */
   private buildSaleItems(
-    dtoItems: { productId: string; quantity: number; discount?: number; paymentMethod: PaymentMethod; bankNote?: string; note?: string; paymentSplit?: { cash: number; gcash: number; bankTransfer: number } }[],
+    dtoItems: { productId: string; quantity: number; discount?: number; paymentMethod: PaymentMethod; bankNote?: string; note?: string; paymentSplit?: { cash: number; gcash: number; bankTransfer: number }; addedAt?: string }[],
     productMap: Map<string, { id: string; name: string; sellingPrice: Prisma.Decimal; costPrice?: Prisma.Decimal; brand: { name: string } }>,
     branchPriceMap?: Map<string, Prisma.Decimal | null>,
   ) {
@@ -468,6 +468,9 @@ export class SalesService {
         costPrice,
         discount,
         subTotal,
+        // Original draft add-time for this line (null when not from a draft;
+        // the UI falls back to the sale's createdAt in that case).
+        addedAt: item.addedAt ? new Date(item.addedAt) : null,
         ...this.resolveItemPayment(item, subTotal, product.name),
       };
     });
@@ -735,6 +738,10 @@ export class SalesService {
         bankNote: i.bankNote ?? null,
         note: i.note ?? null,
         paymentSplit: i.paymentSplit ?? null,
+        // Original draft add-time for this line. Falls back to the sale's
+        // createdAt for rows created before this feature / outside a draft, so
+        // the UI always has a per-item timestamp to show.
+        addedAt: i.addedAt ?? sale.createdAt,
       })),
       createdAt: sale.createdAt,
       decidedAt: sale.decidedAt,

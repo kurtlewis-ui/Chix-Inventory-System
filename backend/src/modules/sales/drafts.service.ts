@@ -224,6 +224,8 @@ export class DraftsService {
               bankNote: i.bankNote ?? undefined,
               note: i.note ?? undefined,
               paymentSplit: i.paymentSplit ?? undefined,
+              // Preserve the ORIGINAL time this item was added to the draft.
+              addedAt: i.addedAt ?? undefined,
             })),
           },
           staffActor,
@@ -240,7 +242,7 @@ export class DraftsService {
       try {
         disposals.push(
           await this.disposalsService.create(
-            { branchId: draft.branchId, productId: d.productId, quantity: d.quantity, reason: d.reason },
+            { branchId: draft.branchId, productId: d.productId, quantity: d.quantity, reason: d.reason, addedAt: d.addedAt ?? undefined },
             staffActor,
           ),
         );
@@ -256,7 +258,7 @@ export class DraftsService {
       try {
         expenses.push(
           await this.expensesService.create(
-            { branchId: draft.branchId, amount: ex.amount, note: ex.note },
+            { branchId: draft.branchId, amount: ex.amount, note: ex.note, addedAt: ex.addedAt ?? undefined },
             staffActor,
           ),
         );
