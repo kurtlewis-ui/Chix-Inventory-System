@@ -154,6 +154,9 @@ export interface SaleLineItem {
   bankNote: string | null;
   note: string | null;
   paymentSplit: PaymentSplit | null;
+  // When this line was originally added to the staff's draft. The backend
+  // falls back to the sale's createdAt when it has no per-item value.
+  addedAt?: string;
 }
 
 export interface Sale {
@@ -235,6 +238,7 @@ export interface Expense {
   decidedBy: string | null;
   decidedAt: string | null;
   createdAt: string;
+  addedAt?: string; // original draft add-time (falls back to createdAt)
 }
 
 export interface ExpenseSummary {
@@ -336,6 +340,7 @@ export interface Disposal {
   decidedBy: string | null;
   decidedAt: string | null;
   createdAt: string;
+  addedAt?: string; // original draft add-time (falls back to createdAt)
 }
 
 export interface DisposalSummary {

@@ -8,6 +8,7 @@ import { useAuthStore } from '@/lib/store';
 import { getApiErrorMessage } from '@/lib/api';
 import { usePagination, Pagination } from '@/components/Pagination';
 import { Select } from '@/components/Select';
+import { DateTimeStack } from '@/components/DateTimeStack';
 import { NumberStepper } from '@/components/NumberStepper';
 import { useUnsavedGuard } from '@/lib/useUnsavedGuard';
 import { useStoredBranch } from '@/lib/useStoredBranch';
@@ -117,7 +118,7 @@ export default function DisposalsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-text-secondary">{d.createdBy}</td>
-                  <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(d.createdAt)}</td>
+                  <td className="px-4 py-3 text-sm"><DateTimeStack iso={d.addedAt ?? d.createdAt} /></td>
                 </tr>
               ))}
             </tbody>
@@ -142,7 +143,7 @@ export default function DisposalsPage() {
                         </p>
                         <p className="text-xs text-text-muted">{d.brandName} · {d.branch?.name ?? '—'} · {peso(d.value)}</p>
                         {d.reason && <p className="text-xs text-text-secondary break-words">{d.reason}</p>}
-                        <p className="text-[11px] text-text-muted">{d.createdBy} · {formatDate(d.createdAt)}</p>
+                        <p className="text-[11px] text-text-muted">{d.createdBy} · {formatDate(d.addedAt ?? d.createdAt)}</p>
                       </div>
                       <span className="shrink-0 badge badge-neutral">
                         <span className={`badge-dot ${d.status === 'APPROVED' ? 'bg-accent-green' : d.status === 'DECLINED' ? 'bg-accent-red' : 'bg-accent-orange'}`} />

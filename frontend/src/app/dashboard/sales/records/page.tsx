@@ -8,6 +8,7 @@ import { filterSalesByProduct } from '@/lib/sale-search';
 import { getApiErrorMessage } from '@/lib/api';
 import { usePagination, Pagination } from '@/components/Pagination';
 import { Select } from '@/components/Select';
+import { DateTimeStack } from '@/components/DateTimeStack';
 import { useStoredBranch } from '@/lib/useStoredBranch';
 import type { PaymentMethod, PaymentSplit } from '@/lib/types';
 
@@ -210,7 +211,9 @@ export default function SalesRecordsPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-sm text-text-secondary">{sale.staff?.name ?? '—'}</td>
-                      <td className="px-4 py-3 text-sm text-text-secondary">{idx === 0 ? formatDate(sale.createdAt) : ''}</td>
+                      {/* Per-item add-time on every row (falls back to the
+                          sale's createdAt when absent). */}
+                      <td className="px-4 py-3 text-sm"><DateTimeStack iso={item.addedAt ?? sale.createdAt} /></td>
                     </tr>
                   ))}
                   <tr className="bg-accent-orange/10 border-b border-card-border">
@@ -257,6 +260,7 @@ export default function SalesRecordsPage() {
                             <span>Qty: <span className="text-text-secondary">{item.quantity}</span></span>
                             <span>{peso(item.unitPrice)}</span>
                             <span className="inline-flex items-center gap-1"><span className={`badge-dot ${paymentDotColor(item.paymentMethod)}`} />{itemPaymentLabel(item)}</span>
+                            <span>{formatDate(item.addedAt ?? sale.createdAt)}</span>
                           </div>
                           {!!item.discount && <p className="mt-0.5 text-accent-orange">−{peso(item.discount)} discount</p>}
                         </li>
