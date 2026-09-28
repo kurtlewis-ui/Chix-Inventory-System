@@ -32,6 +32,24 @@ function formatDate(iso: string) {
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 }
+// Split date and time so they can render on two lines (uncramped) when shown
+// per item/row.
+function fmtDatePart(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+function fmtTimePart(iso: string) {
+  return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
+// A compact two-line date/time block. Used per item so each row shows its own
+// original add-time without cramping the column.
+function DateTimeStack({ iso, className = '' }: { iso: string; className?: string }) {
+  return (
+    <span className={`inline-flex flex-col leading-tight ${className}`}>
+      <span className="text-text-secondary">{fmtDatePart(iso)}</span>
+      <span className="text-[11px] text-text-muted">{fmtTimePart(iso)}</span>
+    </span>
+  );
+}
 function itemPaymentLabel(item: { paymentMethod: string; bankNote?: string | null; paymentSplit?: { cash: number; gcash: number; bankTransfer?: number } | null }) {
   if (item.paymentMethod === 'Split' && item.paymentSplit) {
     const parts: string[] = [];
@@ -282,7 +300,12 @@ export default function StaffDailyReportPage() {
                       <td className="px-4 py-3 text-sm text-text-secondary max-w-[200px]">
                         <span className="break-words">{itemPaymentLabel(item)}</span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-secondary">{idx === 0 ? formatDate(sale.createdAt) : ''}</td>
+                      {/* Each item shows its OWN original add-time (falls back
+                          to the sale's createdAt when absent) — shown on every
+                          item row, not just the first. */}
+                      <td className="px-4 py-3 text-sm">
+                        <DateTimeStack iso={item.addedAt ?? sale.createdAt} />
+                      </td>
                       <td className="px-4 py-3">
                         {idx === 0 && canManageSale(sale) && (
                           <div className="flex items-center gap-1">
@@ -403,6 +426,7 @@ export default function StaffDailyReportPage() {
                           <span>Qty: <span className="text-text-secondary">{item.quantity}</span></span>
                           <span>{peso(item.unitPrice)}</span>
                           <span>{itemPaymentLabel(item)}</span>
+                          <span>{formatDate(item.addedAt ?? sale.createdAt)}</span>
                         </div>
                         {!!item.discount && <p className="mt-0.5 text-accent-orange">−{peso(item.discount)} discount</p>}
                         {item.note && <p className="mt-0.5 italic text-text-muted break-words">{item.note}</p>}
@@ -560,7 +584,7 @@ export default function StaffDailyReportPage() {
                   <td className="px-4 py-3 text-sm text-text-primary">{d.quantity}</td>
                   <td className="px-4 py-3 text-sm font-medium text-text-primary">{peso(d.value)}</td>
                   <td className="px-4 py-3 text-sm text-text-secondary">{d.reason ?? '—'}</td>
-                  <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(d.createdAt)}</td>
+                  <td className="px-4 py-3 text-sm"><DateTimeStack iso={d.addedAt ?? d.createdAt} /></td>
                   <td className="px-4 py-3">
                     {canManageDisposal(d) && (
                       confirmDeleteDisposalId === d.id ? (
@@ -604,7 +628,7 @@ export default function StaffDailyReportPage() {
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-text-primary break-words">{d.quantity}× {d.name}</p>
                   <p className="text-xs text-text-secondary">{d.brandName}{d.reason ? ` · ${d.reason}` : ''}</p>
-                  <p className="text-[11px] text-text-muted">{formatDate(d.createdAt)}</p>
+                  <p className="text-[11px] text-text-muted">{formatDate(d.addedAt ?? d.createdAt)}</p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
                   <span className="text-sm font-medium text-text-primary">{peso(d.value)}</span>
@@ -670,7 +694,7 @@ export default function StaffDailyReportPage() {
                     {peso(e.amount)}
                   </td>
                   <td className="px-4 py-3 text-sm text-text-secondary">{e.note}</td>
-                  <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(e.createdAt)}</td>
+                  <td className="px-4 py-3 text-sm"><DateTimeStack iso={e.addedAt ?? e.createdAt} /></td>
                   <td className="px-4 py-3">
                     {canManageExpense(e) && (
                       confirmDeleteExpenseId === e.id ? (
@@ -713,7 +737,7 @@ export default function StaffDailyReportPage() {
               <li key={e.id} className="flex items-start justify-between gap-3 p-4">
                 <div className="min-w-0">
                   <p className="text-sm text-text-secondary break-words">{e.note}</p>
-                  <p className="text-[11px] text-text-muted">{formatDate(e.createdAt)}</p>
+                  <p className="text-[11px] text-text-muted">{formatDate(e.addedAt ?? e.createdAt)}</p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
                   <span className="text-sm font-medium text-text-primary">{peso(e.amount)}</span>
