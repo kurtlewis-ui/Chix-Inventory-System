@@ -10,6 +10,8 @@ import {
   useProducts,
   useUpdateSale,
   useDeleteSale,
+  useDeleteDisposal,
+  useDeleteExpense,
 } from '@/lib/hooks';
 import { useAuthStore } from '@/lib/store';
 import { getApiErrorMessage } from '@/lib/api';
@@ -20,7 +22,7 @@ import { useToast } from '@/components/Toast';
 import { withScrollPreserved } from '@/lib/useUnsavedGuard';
 import { phBusinessToday } from '@/lib/business-day';
 import { filterSalesByProduct } from '@/lib/sale-search';
-import type { Sale } from '@/lib/types';
+import type { Sale, Disposal, Expense } from '@/lib/types';
 
 function peso(n: number) {
   return `₱${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -64,6 +66,13 @@ export default function StaffDailyReportPage() {
 
   const updateSale = useUpdateSale();
   const deleteSale = useDeleteSale();
+  const deleteDisposal = useDeleteDisposal();
+  const deleteExpense = useDeleteExpense();
+
+  // Separate arm/confirm state per section so a click in one section can't
+  // visually arm a row in another.
+  const [confirmDeleteDisposalId, setConfirmDeleteDisposalId] = useState<string | null>(null);
+  const [confirmDeleteExpenseId, setConfirmDeleteExpenseId] = useState<string | null>(null);
 
   // Branch product catalog for the edit modal (full active list, not the
   // default first page, so sold items resolve correctly). Scoped to the
@@ -82,6 +91,30 @@ export default function StaffDailyReportPage() {
       setConfirmDeleteId(null);
     } catch (e) {
       toast.error(getApiErrorMessage(e), 'Delete failed');
+    }
+  };
+
+  // A pending disposal is deletable only by the staff who created it and only
+  // while PENDING (approved is locked). Deleting it restores reserved stock
+  // server-side. Mirrors the backend guards.
+  const canManageDisposal = (d: Disposal) => d.status === 'PENDING' && d.createdById === myUserId;
+  const handleDeleteDisposal = async (d: Disposal) => {
+    try {
+      await withScrollPreserved(() => deleteDisposal.mutateAsync(d.id));
+      setConfirmDeleteDisposalId(null);
+    } catch (e) {
+      toast.error(getApiErrorMessage(e), 'Delete failed');
+    }
+  };
+
+  // A pending expense is deletable only by its own staff, only while PENDING.
+  const canManageExpense = (e: Expense) => e.status === 'PENDING' && e.staff?.id === myUserId;
+  const handleDeleteExpense = async (e: Expense) => {
+    try {
+      await withScrollPreserved(() => deleteExpense.mutateAsync(e.id));
+      setConfirmDeleteExpenseId(null);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err), 'Delete failed');
     }
   };
 
@@ -514,6 +547,7 @@ export default function StaffDailyReportPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Value</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Reason</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -527,6 +561,37 @@ export default function StaffDailyReportPage() {
                   <td className="px-4 py-3 text-sm font-medium text-text-primary">{peso(d.value)}</td>
                   <td className="px-4 py-3 text-sm text-text-secondary">{d.reason ?? '—'}</td>
                   <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(d.createdAt)}</td>
+                  <td className="px-4 py-3">
+                    {canManageDisposal(d) && (
+                      confirmDeleteDisposalId === d.id ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleDeleteDisposal(d)}
+                            disabled={deleteDisposal.isPending}
+                            className="flex h-8 items-center gap-1 rounded-lg bg-accent-red px-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                            title="Confirm delete"
+                          >
+                            <Check size={14} /> Confirm
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteDisposalId(null)}
+                            className="rounded-lg px-2 py-1 text-xs font-medium text-text-muted transition hover:bg-white/10 hover:text-text-primary"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteDisposalId(d.id)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-accent-red transition hover:bg-accent-red/10"
+                          title="Delete disposal"
+                          aria-label="Delete disposal"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -541,7 +606,38 @@ export default function StaffDailyReportPage() {
                   <p className="text-xs text-text-secondary">{d.brandName}{d.reason ? ` · ${d.reason}` : ''}</p>
                   <p className="text-[11px] text-text-muted">{formatDate(d.createdAt)}</p>
                 </div>
-                <span className="shrink-0 text-sm font-medium text-text-primary">{peso(d.value)}</span>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <span className="text-sm font-medium text-text-primary">{peso(d.value)}</span>
+                  {canManageDisposal(d) && (
+                    confirmDeleteDisposalId === d.id ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleDeleteDisposal(d)}
+                          disabled={deleteDisposal.isPending}
+                          className="flex h-7 items-center gap-1 rounded-lg bg-accent-red px-2 text-[11px] font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                          title="Confirm delete"
+                        >
+                          <Check size={13} /> Confirm
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteDisposalId(null)}
+                          className="rounded-lg px-2 py-1 text-[11px] font-medium text-text-muted transition hover:bg-white/10 hover:text-text-primary"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteDisposalId(d.id)}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-accent-red transition hover:bg-accent-red/10"
+                        title="Delete disposal"
+                        aria-label="Delete disposal"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )
+                  )}
+                </div>
               </li>
             ))}
           </ul>
@@ -564,6 +660,7 @@ export default function StaffDailyReportPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Amount</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Note</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -574,6 +671,37 @@ export default function StaffDailyReportPage() {
                   </td>
                   <td className="px-4 py-3 text-sm text-text-secondary">{e.note}</td>
                   <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(e.createdAt)}</td>
+                  <td className="px-4 py-3">
+                    {canManageExpense(e) && (
+                      confirmDeleteExpenseId === e.id ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleDeleteExpense(e)}
+                            disabled={deleteExpense.isPending}
+                            className="flex h-8 items-center gap-1 rounded-lg bg-accent-red px-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                            title="Confirm delete"
+                          >
+                            <Check size={14} /> Confirm
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteExpenseId(null)}
+                            className="rounded-lg px-2 py-1 text-xs font-medium text-text-muted transition hover:bg-white/10 hover:text-text-primary"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteExpenseId(e.id)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-accent-red transition hover:bg-accent-red/10"
+                          title="Delete expense"
+                          aria-label="Delete expense"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -587,7 +715,38 @@ export default function StaffDailyReportPage() {
                   <p className="text-sm text-text-secondary break-words">{e.note}</p>
                   <p className="text-[11px] text-text-muted">{formatDate(e.createdAt)}</p>
                 </div>
-                <span className="shrink-0 text-sm font-medium text-text-primary">{peso(e.amount)}</span>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <span className="text-sm font-medium text-text-primary">{peso(e.amount)}</span>
+                  {canManageExpense(e) && (
+                    confirmDeleteExpenseId === e.id ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleDeleteExpense(e)}
+                          disabled={deleteExpense.isPending}
+                          className="flex h-7 items-center gap-1 rounded-lg bg-accent-red px-2 text-[11px] font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                          title="Confirm delete"
+                        >
+                          <Check size={13} /> Confirm
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteExpenseId(null)}
+                          className="rounded-lg px-2 py-1 text-[11px] font-medium text-text-muted transition hover:bg-white/10 hover:text-text-primary"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteExpenseId(e.id)}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-accent-red transition hover:bg-accent-red/10"
+                        title="Delete expense"
+                        aria-label="Delete expense"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )
+                  )}
+                </div>
               </li>
             ))}
           </ul>

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, ExpenseStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
@@ -112,6 +112,39 @@ export class ExpensesService {
 
       return this.serialize(updated!);
     });
+  }
+
+  /**
+   * Delete an expense. Expenses have no stock impact, so this just removes the
+   * row (with an audit log). APPROVED expenses are locked; Staff may only
+   * delete their OWN expense (Owner/Admin any). Mirrors SalesService.remove().
+   */
+  async remove(id: string, actor: RequestUser) {
+    const expense = await this.prisma.expense.findUnique({ where: { id } });
+    if (!expense) {
+      throw new NotFoundException('Expense not found');
+    }
+    if (expense.status === ExpenseStatus.APPROVED) {
+      throw new BadRequestException('Approved expenses cannot be deleted');
+    }
+    if (actor.role === 'Staff' && expense.staffId !== actor.userId) {
+      throw new ForbiddenException('You can only delete your own expenses');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.expense.delete({ where: { id } });
+      await tx.auditLog.create({
+        data: {
+          userId: actor.userId,
+          action: 'EXPENSE_DELETED',
+          entityType: 'Expense',
+          entityId: id,
+          newValues: { note: expense.note },
+        },
+      });
+    });
+
+    return { message: 'Expense deleted successfully' };
   }
 
   async findAll(query: QueryExpenseDto, actor: RequestUser, status?: ExpenseStatus) {

@@ -202,6 +202,63 @@ export class DisposalsService {
     });
   }
 
+  /**
+   * Delete a disposal. Mirrors SalesService.remove():
+   *   - APPROVED disposals are locked (its stock write-off is final).
+   *   - Staff may only delete their OWN disposal; Owner/Admin any.
+   *   - A PENDING disposal still holds its reserved stock, so deleting it
+   *     RESTORES that stock (same inventory.upsert increment as decline()).
+   *     A DECLINED disposal already had its stock restored at decline, so we
+   *     must NOT restore again (that would double-credit inventory).
+   */
+  async remove(id: string, actor: RequestUser) {
+    const disposal = await this.prisma.disposal.findUnique({ where: { id } });
+    if (!disposal) {
+      throw new NotFoundException('Disposal not found');
+    }
+    if (disposal.status === DisposalStatus.APPROVED) {
+      throw new BadRequestException('Approved disposals cannot be deleted');
+    }
+    if (actor.role === 'Staff' && disposal.createdById !== actor.userId) {
+      throw new ForbiddenException('You can only delete your own disposals');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      // Only a PENDING disposal still has its reservation in effect — a
+      // DECLINED one was already restored when it was declined.
+      if (disposal.status === DisposalStatus.PENDING && disposal.productId) {
+        await tx.inventory.upsert({
+          where: {
+            productId_branchId: {
+              productId: disposal.productId,
+              branchId: disposal.branchId,
+            },
+          },
+          create: {
+            productId: disposal.productId,
+            branchId: disposal.branchId,
+            quantity: disposal.quantity,
+          },
+          update: { quantity: { increment: disposal.quantity } },
+        });
+      }
+
+      await tx.disposal.delete({ where: { id } });
+
+      await tx.auditLog.create({
+        data: {
+          userId: actor.userId,
+          action: 'DISPOSAL_DELETED',
+          entityType: 'Disposal',
+          entityId: id,
+          newValues: { product: disposal.productName },
+        },
+      });
+    });
+
+    return { message: 'Disposal deleted successfully' };
+  }
+
   /** Same atomic conditional-UPDATE reservation pattern as SalesService. */
   private async reserveStock(
     tx: Prisma.TransactionClient,
@@ -318,7 +375,7 @@ export class DisposalsService {
     return {
       branch: { select: { id: true, name: true } },
       product: { select: { id: true, name: true } },
-      createdBy: { select: { firstName: true, lastName: true } },
+      createdBy: { select: { id: true, firstName: true, lastName: true } },
       decidedBy: { select: { firstName: true, lastName: true } },
     } satisfies Prisma.DisposalInclude;
   }
@@ -338,6 +395,9 @@ export class DisposalsService {
       createdBy: d.createdBy
         ? `${d.createdBy.firstName} ${d.createdBy.lastName}`.trim()
         : 'System',
+      // Creator id (nullable) so the client can gate the delete button to the
+      // staff member's OWN disposal. Display name stays in `createdBy` above.
+      createdById: d.createdBy?.id ?? null,
       decidedBy: d.decidedBy
         ? `${d.decidedBy.firstName} ${d.decidedBy.lastName}`.trim()
         : null,

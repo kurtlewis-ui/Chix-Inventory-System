@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ExpenseStatus } from '@prisma/client';
 import { ExpensesService } from './expenses.service';
@@ -56,6 +56,15 @@ export class ExpensesController {
   @ApiOperation({ summary: 'Decline a pending expense' })
   async decline(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: RequestUser) {
     const data = await this.expensesService.decline(id, user);
+    return { success: true, data };
+  }
+
+  // No @Roles: reachable by any authenticated user; the service restricts
+  // Staff to their OWN expense and blocks deleting an APPROVED one.
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a pending expense' })
+  async remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: RequestUser) {
+    const data = await this.expensesService.remove(id, user);
     return { success: true, data };
   }
 }

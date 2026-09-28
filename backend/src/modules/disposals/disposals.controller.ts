@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -81,6 +82,18 @@ export class DisposalsController {
     @CurrentUser() user: RequestUser,
   ) {
     const data = await this.disposalsService.decline(id, user);
+    return { success: true, data };
+  }
+
+  // No @Roles: reachable by any authenticated user; the service restricts
+  // Staff to their OWN disposal and blocks deleting an APPROVED one.
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a pending disposal (restores reserved stock)' })
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const data = await this.disposalsService.remove(id, user);
     return { success: true, data };
   }
 }
