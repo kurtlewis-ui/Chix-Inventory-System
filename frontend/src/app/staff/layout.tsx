@@ -782,7 +782,8 @@ function DraftBag() {
                     <>
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-text-primary">Total Sales</span>
-                        <span className="font-bold text-text-primary">{peso(itemsTotal)}</span>
+                        {/* Green + a touch larger than the other rows (which are text-sm). */}
+                        <span className="text-base font-bold tabular-nums" style={{ color: '#10b981' }}>{peso(itemsTotal)}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-text-secondary">Total Cash</span>
@@ -801,7 +802,8 @@ function DraftBag() {
                       {itemsDiscountTotal > 0 && (
                         <div className="flex items-center justify-between">
                           <span className="text-text-secondary">Total Discount</span>
-                          <span className="text-text-primary">{peso(itemsDiscountTotal)}</span>
+                          {/* Red, matching the Daily Report summary. */}
+                          <span className="tabular-nums" style={{ color: '#ef4444' }}>{peso(itemsDiscountTotal)}</span>
                         </div>
                       )}
                     </>
