@@ -86,6 +86,14 @@ export class SaleItemInputDto {
   @ValidateNested()
   @Type(() => PaymentSplitDto)
   paymentSplit?: PaymentSplitDto;
+
+  @ApiProperty({
+    required: false,
+    description: 'ISO timestamp of when this item was originally added to the draft cart. Preserved through submit so each item keeps its own add-time.',
+  })
+  @IsOptional()
+  @IsString()
+  addedAt?: string;
 }
 
 export class CreateSaleDto {

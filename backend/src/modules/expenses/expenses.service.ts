@@ -21,6 +21,9 @@ export class ExpensesService {
         amount: new Prisma.Decimal(dto.amount),
         note: dto.note.trim(),
         status: ExpenseStatus.PENDING,
+        // Original draft add-time (null when not from a draft; UI falls back
+        // to createdAt).
+        addedAt: dto.addedAt ? new Date(dto.addedAt) : null,
       },
       include: this.includeFull(),
     });
@@ -245,6 +248,8 @@ export class ExpensesService {
       decidedBy: e.decidedBy ? `${e.decidedBy.firstName} ${e.decidedBy.lastName}`.trim() : null,
       decidedAt: e.decidedAt,
       createdAt: e.createdAt,
+      // Original draft add-time; falls back to createdAt for pre-feature rows.
+      addedAt: e.addedAt ?? e.createdAt,
     };
   }
 }

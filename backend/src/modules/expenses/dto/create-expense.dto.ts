@@ -19,4 +19,12 @@ export class CreateExpenseDto {
   @IsNotEmpty()
   @MaxLength(255)
   note: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'ISO timestamp of when this expense was originally added to the draft cart.',
+  })
+  @IsOptional()
+  @IsString()
+  addedAt?: string;
 }

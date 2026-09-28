@@ -381,6 +381,11 @@ model SaleItem {
   // { cash, gcash, bankTransfer } amounts, only when paymentMethod is Split —
   // must sum exactly to subTotal.
   paymentSplit  Json?         @map("payment_split") @db.JsonB
+  // When this line was ORIGINALLY added to the staff's draft cart (they may
+  // add items at different times, then submit the whole draft in one save).
+  // Nullable: null for pre-migration rows and for sales created outside the
+  // draft flow — callers fall back to the sale's createdAt for display.
+  addedAt       DateTime?     @map("added_at") @db.Timestamp(6)
 
   // Relations
   sale    Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
@@ -449,6 +454,9 @@ model Disposal {
   decidedById String?  @map("decided_by_id") @db.Uuid
   decidedAt   DateTime? @map("decided_at") @db.Timestamp(6)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  // When this disposal was originally added to the staff's draft (see
+  // SaleItem.addedAt). Nullable; falls back to createdAt for display.
+  addedAt     DateTime? @map("added_at") @db.Timestamp(6)
 
   // Relations
   branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
@@ -488,6 +496,9 @@ model Expense {
   decidedById String?       @map("decided_by_id") @db.Uuid
   decidedAt   DateTime?     @map("decided_at") @db.Timestamp(6)
   createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
+  // When this expense was originally added to the staff's draft (see
+  // SaleItem.addedAt). Nullable; falls back to createdAt for display.
+  addedAt     DateTime?     @map("added_at") @db.Timestamp(6)
 
   // Relations
   branch    Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
