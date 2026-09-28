@@ -4,6 +4,11 @@
 
 generator client {
   provider = "prisma-client-js"
+  // Bundle the engine for BOTH the local/dev machine ("native") and the
+  // Vercel/AWS Lambda serverless runtime (Amazon Linux 2 uses the
+  // rhel-openssl-* target). Without the rhel target, the Prisma query engine
+  // binary is missing at runtime on Vercel and every query fails.
+  binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
 }
 
 datasource db {

@@ -43,6 +43,13 @@ function runMigrate() {
     ...process.env,
     PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK: '1',
   };
+  // On Supabase the runtime DATABASE_URL points at the TRANSACTION pooler
+  // (port 6543), which can't run migrations (no advisory locks / session DDL).
+  // If MIGRATE_DATABASE_URL is set (the SESSION pooler / direct 5432 URL), use
+  // it for migrations. Falls back to DATABASE_URL for single-URL setups.
+  if (process.env.MIGRATE_DATABASE_URL) {
+    env.DATABASE_URL = process.env.MIGRATE_DATABASE_URL;
+  }
   const result = spawnSync('npx', ['prisma', 'migrate', 'deploy'], {
     stdio: 'inherit',
     env,
