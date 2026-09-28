@@ -340,30 +340,31 @@ export default function StaffDailyReportPage() {
           { label: 'Bank Transfer', value: methodTotal('BankTransfer'), dot: '#a855f7' },
         ];
         return (
-          <div className="mt-4 rounded-xl border border-card-border bg-card-bg p-5 shadow-sm">
-            {/* Headline: Total Sales */}
-            <div className="flex items-baseline justify-between gap-3 border-b border-card-border pb-3">
-              <span className="text-sm font-semibold text-text-secondary">Total Sales</span>
-              <span className="text-2xl font-bold tabular-nums" style={{ color: '#10b981' }}>{peso(totalSales)}</span>
+          <div className="mt-4 rounded-xl border border-card-border bg-card-bg p-4 shadow-sm">
+            {/* Headline: Total Sales — kept green, a touch larger than the rows. */}
+            <div className="flex items-baseline justify-between gap-3 border-b border-card-border pb-2.5">
+              <span className="text-sm font-semibold text-text-primary">Total Sales</span>
+              <span className="text-[1.75rem] font-bold leading-none tabular-nums" style={{ color: '#10b981' }}>{peso(totalSales)}</span>
             </div>
 
-            {/* Payment methods — aligned label (left) → amount (right). */}
-            <div className="mt-3 space-y-2">
+            {/* Payment methods — color dot kept for quick ID; label + amount use
+                the theme text color (black in light, white in dark). Compact. */}
+            <div className="mt-2.5 space-y-1.5">
               {rows.map((r) => (
                 <div key={r.label} className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-sm text-text-secondary">
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: r.dot }} />
+                  <span className="flex items-center gap-2 text-xs text-text-primary">
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: r.dot }} />
                     {r.label}
                   </span>
-                  <span className="text-sm font-semibold tabular-nums text-text-primary">{peso(r.value)}</span>
+                  <span className="text-xs font-semibold tabular-nums text-text-primary">{peso(r.value)}</span>
                 </div>
               ))}
             </div>
 
-            {/* Discount, set apart at the bottom. */}
-            <div className="mt-3 flex items-center justify-between gap-3 border-t border-card-border pt-3">
-              <span className="text-sm text-text-secondary">Total Discount</span>
-              <span className="text-sm font-semibold tabular-nums" style={{ color: '#f59e0b' }}>{peso(totalDiscount)}</span>
+            {/* Discount, set apart at the bottom — shown in red. */}
+            <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-card-border pt-2.5">
+              <span className="text-xs text-text-primary">Total Discount</span>
+              <span className="text-xs font-semibold tabular-nums" style={{ color: '#ef4444' }}>{peso(totalDiscount)}</span>
             </div>
           </div>
         );
