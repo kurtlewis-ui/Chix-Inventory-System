@@ -470,7 +470,7 @@ export default function StaffDailyReportPage() {
             {/* Headline: Total Sales — kept green, a touch larger than the rows. */}
             <div className="flex items-baseline justify-between gap-3 border-b border-card-border pb-2.5">
               <span className="text-sm font-semibold text-text-primary">Total Sales</span>
-              <span className="text-[1.75rem] font-bold leading-none tabular-nums" style={{ color: '#10b981' }}>{peso(totalSales)}</span>
+              <span className="text-sm font-bold leading-none tabular-nums" style={{ color: '#10b981' }}>{peso(totalSales)}</span>
             </div>
 
             {/* Payment methods — color dot kept for quick ID; label + amount use
