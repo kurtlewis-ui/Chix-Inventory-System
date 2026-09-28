@@ -24,6 +24,7 @@ import {
 import { getApiErrorMessage } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { Select } from '@/components/Select';
+import { DateTimeStack } from '@/components/DateTimeStack';
 import { withScrollPreserved } from '@/lib/useUnsavedGuard';
 import { useStoredBranch } from '@/lib/useStoredBranch';
 import { filterSalesByProduct } from '@/lib/sale-search';
@@ -471,7 +472,9 @@ export default function SalesPendingPage() {
                         {item.note && <p className="mt-0.5 text-[11px] text-text-muted truncate max-w-[140px]">{item.note}</p>}
                       </td>
                       <td className="px-4 py-4 text-sm text-text-secondary">{sale.staff?.name ?? '—'}</td>
-                      <td className="px-4 py-4 text-sm text-text-secondary">{idx === 0 ? formatDate(sale.createdAt) : ''}</td>
+                      {/* Per-item add-time on every row (falls back to the
+                          sale's createdAt when absent). */}
+                      <td className="px-4 py-4 text-sm"><DateTimeStack iso={item.addedAt ?? sale.createdAt} /></td>
                       <td className="px-4 py-4">
                         {idx === 0 && (
                           <div className="act-group">
@@ -529,6 +532,7 @@ export default function SalesPendingPage() {
                             <span>Qty: <span className="text-text-secondary">{item.quantity}</span></span>
                             <span>{peso(item.unitPrice)}</span>
                             <span className="inline-flex items-center gap-1"><span className={`badge-dot ${paymentDotColor(item.paymentMethod)}`} />{itemPaymentLabel(item)}</span>
+                            <span>{formatDate(item.addedAt ?? sale.createdAt)}</span>
                           </div>
                           {!!item.discount && <p className="mt-0.5 text-accent-orange">−{peso(item.discount)} discount</p>}
                           {item.note && <p className="mt-0.5 text-text-muted break-words">{item.note}</p>}
@@ -900,7 +904,7 @@ export default function SalesPendingPage() {
                   <td className="px-4 py-4 text-sm text-text-primary font-medium">{peso(d.value)}</td>
                   <td className="px-4 py-4 text-sm text-text-secondary max-w-[180px] truncate">{d.reason ?? '—'}</td>
                   <td className="px-4 py-4 text-sm text-text-secondary">{d.createdBy}</td>
-                  <td className="px-4 py-4 text-sm text-text-secondary">{formatDate(d.createdAt)}</td>
+                  <td className="px-4 py-4 text-sm"><DateTimeStack iso={d.addedAt ?? d.createdAt} /></td>
                   <td className="px-4 py-4">
                     <div className="act-group">
                       <button onClick={() => runSafe(async () => { await approveDisposal.mutateAsync(d.id); setActionStatus(`✓ Disposal of ${d.quantity}× ${d.name} approved (stock deducted).`); })} className="act-btn act-approve" title="Approve"><CheckCircle size={16} /></button>
@@ -927,7 +931,7 @@ export default function SalesPendingPage() {
                         <p className="text-sm font-medium text-text-primary break-words">{d.quantity}× {d.name}</p>
                         <p className="text-xs text-text-muted">{d.brandName} · {peso(d.value)}</p>
                         {d.reason && <p className="text-xs text-text-secondary break-words">{d.reason}</p>}
-                        <p className="text-[11px] text-text-muted">{d.createdBy} · {formatDate(d.createdAt)}</p>
+                        <p className="text-[11px] text-text-muted">{d.createdBy} · {formatDate(d.addedAt ?? d.createdAt)}</p>
                       </div>
                       <div className="act-group shrink-0">
                         <button onClick={() => runSafe(async () => { await approveDisposal.mutateAsync(d.id); setActionStatus(`✓ Disposal of ${d.quantity}× ${d.name} approved (stock deducted).`); })} className="act-btn act-approve" title="Approve"><CheckCircle size={16} /></button>
@@ -993,7 +997,7 @@ export default function SalesPendingPage() {
                   <td className="px-4 py-4 text-sm text-text-primary">{e.staff?.name ?? '—'}</td>
                   <td className="px-4 py-4 text-sm text-text-primary font-medium">{peso(e.amount)}</td>
                   <td className="px-4 py-4 text-sm text-text-secondary max-w-[220px] truncate">{e.note}</td>
-                  <td className="px-4 py-4 text-sm text-text-secondary">{formatDate(e.createdAt)}</td>
+                  <td className="px-4 py-4 text-sm"><DateTimeStack iso={e.addedAt ?? e.createdAt} /></td>
                   <td className="px-4 py-4">
                     <div className="act-group">
                       <button onClick={() => runSafe(async () => { await approveExpense.mutateAsync(e.id); setActionStatus(`✓ Expense "${e.note}" approved.`); })} className="act-btn act-approve" title="Approve"><CheckCircle size={16} /></button>
@@ -1019,7 +1023,7 @@ export default function SalesPendingPage() {
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-text-primary">{peso(e.amount)}</p>
                         <p className="text-xs text-text-secondary break-words">{e.note}</p>
-                        <p className="text-[11px] text-text-muted">{e.staff?.name ?? '—'} · {formatDate(e.createdAt)}</p>
+                        <p className="text-[11px] text-text-muted">{e.staff?.name ?? '—'} · {formatDate(e.addedAt ?? e.createdAt)}</p>
                       </div>
                       <div className="act-group shrink-0">
                         <button onClick={() => runSafe(async () => { await approveExpense.mutateAsync(e.id); setActionStatus(`✓ Expense "${e.note}" approved.`); })} className="act-btn act-approve" title="Approve"><CheckCircle size={16} /></button>
