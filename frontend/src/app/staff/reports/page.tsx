@@ -1,19 +1,26 @@
 'use client';
 
 import { Fragment, useMemo, useState } from 'react';
-import { Search, ShoppingCart } from 'lucide-react';
+import { Search, ShoppingCart, Pencil, Trash2, Check } from 'lucide-react';
 import {
   useSalesRecords,
   useSalesPending,
   useDisposals,
   useExpenses,
+  useProducts,
+  useUpdateSale,
+  useDeleteSale,
 } from '@/lib/hooks';
 import { useAuthStore } from '@/lib/store';
 import { getApiErrorMessage } from '@/lib/api';
 import { TableSkeleton } from '@/components/Skeleton';
 import { Select } from '@/components/Select';
+import { EditSaleModal } from '@/components/EditSaleModal';
+import { useToast } from '@/components/Toast';
+import { withScrollPreserved } from '@/lib/useUnsavedGuard';
 import { phBusinessToday } from '@/lib/business-day';
 import { filterSalesByProduct } from '@/lib/sale-search';
+import type { Sale } from '@/lib/types';
 
 function peso(n: number) {
   return `₱${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -43,6 +50,41 @@ export default function StaffDailyReportPage() {
   const [search, setSearch] = useState('');
 
   const branchName = useAuthStore((s) => s.user?.branch?.name);
+  // Current staff's own id + branch — used to gate the Edit/Delete buttons to
+  // the staff member's OWN pending sales, and to load their branch catalog for
+  // the edit modal.
+  const myUserId = useAuthStore((s) => s.user?.id);
+  const myBranchId = useAuthStore((s) => s.user?.branch?.id);
+  const toast = useToast();
+
+  // Edit / delete state. `editingSale` opens the shared EditSaleModal;
+  // `confirmDeleteId` arms the two-click delete confirm.
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const updateSale = useUpdateSale();
+  const deleteSale = useDeleteSale();
+
+  // Branch product catalog for the edit modal (full active list, not the
+  // default first page, so sold items resolve correctly). Scoped to the
+  // staff's own branch, matching where their sales live.
+  const { data: productData } = useProducts({ branchId: myBranchId || undefined, limit: 1000 });
+  const products = productData?.data ?? [];
+
+  // A pending sale is editable/deletable only by the staff who OWNS it and only
+  // while still PENDING (approved sales are locked). This mirrors the backend's
+  // own guards, so the buttons never appear for actions the server would reject.
+  const canManageSale = (sale: Sale) => sale.status === 'PENDING' && sale.staff?.id === myUserId;
+
+  const handleDelete = async (sale: Sale) => {
+    try {
+      await withScrollPreserved(() => deleteSale.mutateAsync(sale.id));
+      setConfirmDeleteId(null);
+    } catch (e) {
+      toast.error(getApiErrorMessage(e), 'Delete failed');
+    }
+  };
+
   // Use the PH BUSINESS date (2 AM–2 AM), not the device-local calendar date,
   // so the window matches how the backend files sales. Using the device date
   // is what made the report come back empty right after saving (e.g. just
@@ -172,6 +214,7 @@ export default function StaffDailyReportPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Sub Total</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Payment</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -207,10 +250,52 @@ export default function StaffDailyReportPage() {
                         <span className="break-words">{itemPaymentLabel(item)}</span>
                       </td>
                       <td className="px-4 py-3 text-sm text-text-secondary">{idx === 0 ? formatDate(sale.createdAt) : ''}</td>
+                      <td className="px-4 py-3">
+                        {idx === 0 && canManageSale(sale) && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setEditingSale(sale)}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary transition hover:bg-white/10 hover:text-text-primary"
+                              title="Edit sale"
+                              aria-label={`Edit sale #${sale.number}`}
+                            >
+                              <Pencil size={15} />
+                            </button>
+                            {confirmDeleteId === sale.id ? (
+                              <>
+                                <button
+                                  onClick={() => handleDelete(sale)}
+                                  disabled={deleteSale.isPending}
+                                  className="flex h-8 items-center gap-1 rounded-lg bg-accent-red px-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                                  title="Confirm delete"
+                                  aria-label={`Confirm delete sale #${sale.number}`}
+                                >
+                                  <Check size={14} /> Confirm
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDeleteId(null)}
+                                  className="rounded-lg px-2 py-1 text-xs font-medium text-text-muted transition hover:bg-white/10 hover:text-text-primary"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => setConfirmDeleteId(sale.id)}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-accent-red transition hover:bg-accent-red/10"
+                                title="Delete sale"
+                                aria-label={`Delete sale #${sale.number}`}
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   ))}
                   <tr className="bg-surface-muted border-t border-card-border">
-                    <td colSpan={8} className="px-4 py-2 text-sm font-semibold text-text-primary">
+                    <td colSpan={9} className="px-4 py-2 text-sm font-semibold text-text-primary">
                       Total for Sale #{sale.number}: {peso(sale.visibleTotal)}
                     </td>
                   </tr>
@@ -230,7 +315,48 @@ export default function StaffDailyReportPage() {
                       {sale.staff?.name && <p className="text-[11px] text-text-secondary">{sale.staff.name}</p>}
                       {sale.customerName && <p className="text-[11px] text-accent-blue">{sale.customerName}</p>}
                     </div>
-                    <span className="shrink-0 text-[11px] text-text-muted">{formatDate(sale.createdAt)}</span>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <span className="text-[11px] text-text-muted">{formatDate(sale.createdAt)}</span>
+                      {canManageSale(sale) && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setEditingSale(sale)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-text-secondary transition hover:bg-white/10 hover:text-text-primary"
+                            title="Edit sale"
+                            aria-label={`Edit sale #${sale.number}`}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          {confirmDeleteId === sale.id ? (
+                            <>
+                              <button
+                                onClick={() => handleDelete(sale)}
+                                disabled={deleteSale.isPending}
+                                className="flex h-7 items-center gap-1 rounded-lg bg-accent-red px-2 text-[11px] font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                                title="Confirm delete"
+                              >
+                                <Check size={13} /> Confirm
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteId(null)}
+                                className="rounded-lg px-2 py-1 text-[11px] font-medium text-text-muted transition hover:bg-white/10 hover:text-text-primary"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmDeleteId(sale.id)}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg text-accent-red transition hover:bg-accent-red/10"
+                              title="Delete sale"
+                              aria-label={`Delete sale #${sale.number}`}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <ul className="space-y-1.5">
                     {sale.items.map((item) => (
@@ -492,6 +618,26 @@ export default function StaffDailyReportPage() {
           </div>
         </div>
       </div>
+
+      {/* Edit modal for a pending sale (shared with the Pending page). On save
+          it PATCHes the sale, which restores the old stock and reserves the new
+          quantities server-side, then refreshes the report. */}
+      {editingSale && (
+        <EditSaleModal
+          sale={editingSale}
+          products={products}
+          isSaving={updateSale.isPending}
+          onClose={() => setEditingSale(null)}
+          onSave={async (payload) => {
+            try {
+              await withScrollPreserved(() => updateSale.mutateAsync({ id: editingSale.id, ...payload }));
+              setEditingSale(null);
+            } catch (e) {
+              throw new Error(getApiErrorMessage(e));
+            }
+          }}
+        />
+      )}
 
     </div>
   );
