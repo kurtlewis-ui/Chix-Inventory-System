@@ -65,9 +65,10 @@ function AdminStaffView() {
   const updateUser = useUpdateUser();
   const archiveUser = useArchiveUser();
   const [showAddModal, setShowAddModal] = useState(false);
-  // Two-click confirm for archiving a staff (archiving also disables their
-  // account server-side, immediately blocking login).
-  const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null);
+  // The staff pending an archive confirmation. A modal (not an inline
+  // button) handles the confirm so it never overflows the narrow actions
+  // column. Archiving also disables the account server-side (blocks login).
+  const [archiveTarget, setArchiveTarget] = useState<FullUser | null>(null);
 
   const users = data?.data ?? [];
   // Admin can only see Staff role users
@@ -119,11 +120,12 @@ function AdminStaffView() {
   // (isActive=false) and kills their sessions, so they can no longer log in.
   // They move to Staff Archive, where an Admin can Restore (re-enable) them.
   const [archiveError, setArchiveError] = useState<string | null>(null);
-  const handleArchive = async (user: FullUser) => {
+  const handleArchive = async () => {
+    if (!archiveTarget) return;
     setArchiveError(null);
     try {
-      await withScrollPreserved(() => archiveUser.mutateAsync(user.id));
-      setConfirmArchiveId(null);
+      await withScrollPreserved(() => archiveUser.mutateAsync(archiveTarget.id));
+      setArchiveTarget(null);
     } catch (e) {
       setArchiveError(getApiErrorMessage(e));
     }
@@ -217,33 +219,14 @@ function AdminStaffView() {
                       >
                         <Store size={15} />
                       </button>
-                      {confirmArchiveId === user.id ? (
-                        <>
-                          <button
-                            onClick={() => handleArchive(user)}
-                            disabled={archiveUser.isPending}
-                            title="Confirm archive"
-                            className="rounded-lg bg-accent-red px-2 py-1 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-                          >
-                            Confirm
-                          </button>
-                          <button
-                            onClick={() => setConfirmArchiveId(null)}
-                            className="rounded-lg px-2 py-1 text-xs font-medium text-text-muted transition hover:bg-white/10 hover:text-text-primary"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          onClick={() => { setArchiveError(null); setConfirmArchiveId(user.id); }}
-                          title="Archive staff (disables their account)"
-                          aria-label="Archive staff"
-                          className="p-1.5 text-accent-red hover:bg-accent-red/10 rounded-lg transition"
-                        >
-                          <Archive size={15} />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => { setArchiveError(null); setArchiveTarget(user); }}
+                        title="Archive staff (disables their account)"
+                        aria-label="Archive staff"
+                        className="p-1.5 text-accent-red hover:bg-accent-red/10 rounded-lg transition"
+                      >
+                        <Archive size={15} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -290,30 +273,12 @@ function AdminStaffView() {
                           >
                             <Store size={14} /> Assign Branch
                           </button>
-                          {confirmArchiveId === user.id ? (
-                            <>
-                              <button
-                                onClick={() => handleArchive(user)}
-                                disabled={archiveUser.isPending}
-                                className="inline-flex items-center gap-1 rounded-lg bg-accent-red px-3 py-1.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-                              >
-                                <Archive size={14} /> Confirm
-                              </button>
-                              <button
-                                onClick={() => setConfirmArchiveId(null)}
-                                className="rounded-lg px-3 py-1.5 text-sm font-medium text-text-muted transition hover:bg-white/10 hover:text-text-primary"
-                              >
-                                Cancel
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              onClick={() => { setArchiveError(null); setConfirmArchiveId(user.id); }}
-                              className="inline-flex items-center gap-2 rounded-lg border border-accent-red/30 bg-accent-red/10 px-3 py-1.5 text-sm font-semibold text-accent-red transition-all hover:bg-accent-red hover:text-white"
-                            >
-                              <Archive size={14} /> Archive
-                            </button>
-                          )}
+                          <button
+                            onClick={() => { setArchiveError(null); setArchiveTarget(user); }}
+                            className="inline-flex items-center gap-2 rounded-lg border border-accent-red/30 bg-accent-red/10 px-3 py-1.5 text-sm font-semibold text-accent-red transition-all hover:bg-accent-red hover:text-white"
+                          >
+                            <Archive size={14} /> Archive
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -381,6 +346,28 @@ function AdminStaffView() {
               <button onClick={closeBranchModal} className="px-4 py-2 border border-input-border rounded-lg text-sm text-text-primary hover:opacity-80 transition">Cancel</button>
               <button onClick={handleSaveBranch} disabled={updateUser.isPending} className="px-4 py-2 btn-grad rounded-lg text-sm font-medium disabled:opacity-60">
                 {updateUser.isPending ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Archive confirmation — a modal (matching Brands/Shops) so the confirm
+          never overflows the narrow actions column. Archiving disables the
+          staff's account (they can no longer log in) until restored. */}
+      {archiveTarget && (
+        <Modal title="Archive Staff" onClose={() => { setArchiveTarget(null); setArchiveError(null); }}>
+          <div className="space-y-4">
+            <p className="text-sm text-text-primary">
+              Archive <strong>{archiveTarget.firstName} {archiveTarget.lastName}</strong>? This <strong>disables their account</strong> — they won&apos;t be able to log in. You can restore them anytime from <strong>Archive → Staff Archive</strong>.
+            </p>
+            {archiveError && (
+              <div className="rounded-lg bg-accent-red/10 border border-accent-red/30 px-3 py-2 text-sm text-accent-red">{archiveError}</div>
+            )}
+            <div className="flex gap-3 justify-end pt-2">
+              <button onClick={() => { setArchiveTarget(null); setArchiveError(null); }} className="px-4 py-2 border border-input-border rounded-lg text-sm text-text-primary hover:opacity-80 transition">Cancel</button>
+              <button onClick={handleArchive} disabled={archiveUser.isPending} className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-accent-red hover:opacity-90 transition disabled:opacity-60">
+                {archiveUser.isPending ? 'Archiving...' : 'Yes, Archive'}
               </button>
             </div>
           </div>
