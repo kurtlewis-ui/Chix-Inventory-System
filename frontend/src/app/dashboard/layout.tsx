@@ -64,7 +64,8 @@ const ownerNavItems: NavItem[] = [
 // pages themselves render read-only (no create/edit/restock/delete) and never
 // expose cost. The only actions Admin performs are approving/declining pending
 // sales, disposals and expenses, plus managing Staff accounts + branch
-// assignments. Cost-derived pages (Profit & Loss) and Archive are omitted.
+// assignments, and archiving/restoring Staff. Cost-derived pages (Profit &
+// Loss) are omitted; Archive is limited to Staff.
 const adminNavItems: NavItem[] = [
   // Admin has NO Dashboard page (removed) — Admin lands on Sales → Pending.
   { label: 'Shops', href: '/dashboard/shops', icon: <Store size={18} /> },
@@ -82,6 +83,16 @@ const adminNavItems: NavItem[] = [
   },
   { label: 'Staff', href: '/dashboard/users', icon: <Users size={18} /> },
   { label: 'Activity Logs', href: '/dashboard/activity-logs', icon: <ClipboardList size={18} /> },
+  // Admin archive is Staff-only. The archived-users page already hides Owner
+  // accounts from non-Owners, so it shows just archived Staff for an Admin.
+  {
+    label: 'Archive',
+    href: '/dashboard/archive',
+    icon: <Archive size={18} />,
+    dropdown: [
+      { label: 'Staff Archive', href: '/dashboard/archive/users' },
+    ],
+  },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
