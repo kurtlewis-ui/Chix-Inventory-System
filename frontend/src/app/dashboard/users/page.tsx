@@ -356,17 +356,17 @@ function AdminStaffView() {
           never overflows the narrow actions column. Archiving disables the
           staff's account (they can no longer log in) until restored. */}
       {archiveTarget && (
-        <Modal title="Archive Staff" onClose={() => { setArchiveTarget(null); setArchiveError(null); }}>
+        <Modal title="Archive User" onClose={() => { setArchiveTarget(null); setArchiveError(null); }}>
           <div className="space-y-4">
-            <p className="text-sm text-text-primary">
-              Archive <strong>{archiveTarget.firstName} {archiveTarget.lastName}</strong>? This <strong>disables their account</strong> — they won&apos;t be able to log in. You can restore them anytime from <strong>Archive → Staff Archive</strong>.
+            <p className="text-sm text-text-secondary">
+              Are you sure you want to archive <strong className="text-text-primary">{archiveTarget.firstName} {archiveTarget.lastName}</strong>? This user will be moved to the archive.
             </p>
             {archiveError && (
               <div className="rounded-lg bg-accent-red/10 border border-accent-red/30 px-3 py-2 text-sm text-accent-red">{archiveError}</div>
             )}
             <div className="flex gap-3 justify-end pt-2">
               <button onClick={() => { setArchiveTarget(null); setArchiveError(null); }} className="px-4 py-2 border border-input-border rounded-lg text-sm text-text-primary hover:opacity-80 transition">Cancel</button>
-              <button onClick={handleArchive} disabled={archiveUser.isPending} className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-accent-red hover:opacity-90 transition disabled:opacity-60">
+              <button onClick={handleArchive} disabled={archiveUser.isPending} className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-accent-archive hover:opacity-90 transition disabled:opacity-60">
                 {archiveUser.isPending ? 'Archiving...' : 'Yes, Archive'}
               </button>
             </div>
