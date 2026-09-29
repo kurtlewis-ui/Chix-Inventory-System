@@ -777,13 +777,13 @@ function DraftBag() {
                     </div>
                   </div>
                 )}
-                <div className="space-y-2 text-sm">
+                <div className="space-y-2 text-xs">
                   {items.length > 0 && (
                     <>
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-text-primary">Total Sales</span>
-                        {/* Green + a touch larger than the other rows (which are text-sm). */}
-                        <span className="text-base font-bold tabular-nums" style={{ color: '#10b981' }}>{peso(itemsTotal)}</span>
+                        {/* Black (theme text), just a touch larger than the xs rows. */}
+                        <span className="text-sm font-bold tabular-nums text-text-primary">{peso(itemsTotal)}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-text-secondary">Total Cash</span>
@@ -793,12 +793,12 @@ function DraftBag() {
                         <span className="text-text-secondary">Total Gcash</span>
                         <span className="text-text-primary">{peso(paymentTotals.gcash)}</span>
                       </div>
-                      {paymentTotals.bankTransfer > 0 && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-text-secondary">Total Bank Transfer</span>
-                          <span className="text-text-primary">{peso(paymentTotals.bankTransfer)}</span>
-                        </div>
-                      )}
+                      {/* Bank Transfer always shown (Split payments already flow
+                          into these three buckets), so all methods are visible. */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-text-secondary">Total Bank Transfer</span>
+                        <span className="text-text-primary">{peso(paymentTotals.bankTransfer)}</span>
+                      </div>
                       {itemsDiscountTotal > 0 && (
                         <div className="flex items-center justify-between">
                           <span className="text-text-secondary">Total Discount</span>
