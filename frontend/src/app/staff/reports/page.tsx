@@ -18,6 +18,7 @@ import { getApiErrorMessage } from '@/lib/api';
 import { TableSkeleton } from '@/components/Skeleton';
 import { Select } from '@/components/Select';
 import { EditSaleModal } from '@/components/EditSaleModal';
+import { ProductThumb } from '@/components/ProductThumb';
 import { useToast } from '@/components/Toast';
 import { withScrollPreserved } from '@/lib/useUnsavedGuard';
 import { phBusinessToday } from '@/lib/business-day';
@@ -258,6 +259,7 @@ export default function StaffDailyReportPage() {
             <thead>
               <tr className="bg-table-header text-table-header-text">
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Sale</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Image</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Name</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Qty</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Brand</th>
@@ -286,6 +288,7 @@ export default function StaffDailyReportPage() {
                           </>
                         )}
                       </td>
+                      <td className="px-4 py-3"><ProductThumb src={item.image} alt={item.name} /></td>
                       <td className="px-4 py-3 text-sm text-text-primary">
                         {item.name}
                         {item.note && <p className="text-[10px] text-text-muted italic mt-0.5">{item.note}</p>}
@@ -351,7 +354,7 @@ export default function StaffDailyReportPage() {
                     </tr>
                   ))}
                   <tr className="bg-surface-muted border-t border-card-border">
-                    <td colSpan={9} className="px-4 py-2 text-sm font-semibold text-text-primary">
+                    <td colSpan={10} className="px-4 py-2 text-sm font-semibold text-text-primary">
                       Total for Sale #{sale.number}: {peso(sale.visibleTotal)}
                     </td>
                   </tr>
@@ -417,19 +420,24 @@ export default function StaffDailyReportPage() {
                   <ul className="space-y-1.5">
                     {sale.items.map((item) => (
                       <li key={item.id} className="rounded-lg bg-surface-muted p-2.5 text-xs">
-                        <div className="flex items-start justify-between gap-2">
-                          <span className="min-w-0 font-medium text-text-primary break-words">{item.name}</span>
-                          <span className="shrink-0 font-medium text-text-primary">{peso(item.subTotal)}</span>
+                        <div className="flex items-start gap-2.5">
+                          <ProductThumb src={item.image} alt={item.name} size="w-9 h-9" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="min-w-0 font-medium text-text-primary break-words">{item.name}</span>
+                              <span className="shrink-0 font-medium text-text-primary">{peso(item.subTotal)}</span>
+                            </div>
+                            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-text-muted">
+                              <span>{item.brandName}</span>
+                              <span>Qty: <span className="text-text-secondary">{item.quantity}</span></span>
+                              <span>{peso(item.unitPrice)}</span>
+                              <span>{itemPaymentLabel(item)}</span>
+                              <span>{formatDate(item.addedAt ?? sale.createdAt)}</span>
+                            </div>
+                            {!!item.discount && <p className="mt-0.5 text-accent-orange">−{peso(item.discount)} discount</p>}
+                            {item.note && <p className="mt-0.5 italic text-text-muted break-words">{item.note}</p>}
+                          </div>
                         </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-text-muted">
-                          <span>{item.brandName}</span>
-                          <span>Qty: <span className="text-text-secondary">{item.quantity}</span></span>
-                          <span>{peso(item.unitPrice)}</span>
-                          <span>{itemPaymentLabel(item)}</span>
-                          <span>{formatDate(item.addedAt ?? sale.createdAt)}</span>
-                        </div>
-                        {!!item.discount && <p className="mt-0.5 text-accent-orange">−{peso(item.discount)} discount</p>}
-                        {item.note && <p className="mt-0.5 italic text-text-muted break-words">{item.note}</p>}
                       </li>
                     ))}
                   </ul>
@@ -565,6 +573,7 @@ export default function StaffDailyReportPage() {
           <table className="hidden w-full md:table">
             <thead>
               <tr className="bg-table-header text-table-header-text">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Image</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Product</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Brand</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Qty</th>
@@ -577,6 +586,7 @@ export default function StaffDailyReportPage() {
             <tbody>
               {todaysDisposals.map((d) => (
                 <tr key={d.id} className="border-t border-card-border">
+                  <td className="px-4 py-3"><ProductThumb src={d.image} alt={d.name} /></td>
                   <td className="px-4 py-3 text-sm font-medium text-text-primary">
                     {d.name}
                   </td>
@@ -625,10 +635,13 @@ export default function StaffDailyReportPage() {
           <ul className="divide-y divide-card-border md:hidden">
             {todaysDisposals.map((d) => (
               <li key={d.id} className="flex items-start justify-between gap-3 p-4">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-text-primary break-words">{d.quantity}× {d.name}</p>
-                  <p className="text-xs text-text-secondary">{d.brandName}{d.reason ? ` · ${d.reason}` : ''}</p>
-                  <p className="text-[11px] text-text-muted">{formatDate(d.addedAt ?? d.createdAt)}</p>
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <ProductThumb src={d.image} alt={d.name} size="w-9 h-9" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-text-primary break-words">{d.quantity}× {d.name}</p>
+                    <p className="text-xs text-text-secondary">{d.brandName}{d.reason ? ` · ${d.reason}` : ''}</p>
+                    <p className="text-[11px] text-text-muted">{formatDate(d.addedAt ?? d.createdAt)}</p>
+                  </div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
                   <span className="text-sm font-medium text-text-primary">{peso(d.value)}</span>

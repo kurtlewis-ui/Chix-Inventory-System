@@ -25,6 +25,7 @@ import { getApiErrorMessage } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { Select } from '@/components/Select';
 import { DateTimeStack } from '@/components/DateTimeStack';
+import { ProductThumb } from '@/components/ProductThumb';
 import { withScrollPreserved } from '@/lib/useUnsavedGuard';
 import { useStoredBranch } from '@/lib/useStoredBranch';
 import { filterSalesByProduct } from '@/lib/sale-search';
@@ -426,6 +427,7 @@ export default function SalesPendingPage() {
             <thead>
               <tr className="bg-table-header text-table-header-text">
                 <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase">Sale</th>
+                <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase">Image</th>
                 <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase">Name</th>
                 <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase">Qty</th>
                 <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase">Brand</th>
@@ -439,11 +441,11 @@ export default function SalesPendingPage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={10} className="text-center py-8 text-text-muted"><Loader2 className="inline animate-spin mr-2" size={16} />Loading pending sales...</td></tr>
+                <tr><td colSpan={11} className="text-center py-8 text-text-muted"><Loader2 className="inline animate-spin mr-2" size={16} />Loading pending sales...</td></tr>
               ) : isError ? (
-                <tr><td colSpan={10} className="text-center py-8 text-accent-red">{getApiErrorMessage(error)}</td></tr>
+                <tr><td colSpan={11} className="text-center py-8 text-accent-red">{getApiErrorMessage(error)}</td></tr>
               ) : sales.length === 0 ? (
-                <tr><td colSpan={10} className="text-center py-8 text-text-muted">No pending sales.</td></tr>
+                <tr><td colSpan={11} className="text-center py-8 text-text-muted">No pending sales.</td></tr>
               ) : sales.map((sale) => (
                 <Fragment key={sale.id}>
                   {sale.items.map((item, idx) => (
@@ -456,6 +458,7 @@ export default function SalesPendingPage() {
                           </>
                         )}
                       </td>
+                      <td className="px-4 py-4"><ProductThumb src={item.image} alt={item.name} /></td>
                       <td className="px-4 py-4 text-sm text-text-primary">{item.name}</td>
                       <td className="px-4 py-4 text-sm text-text-primary">{item.quantity}</td>
                       <td className="px-4 py-4 text-sm text-text-secondary">{item.brandName}</td>
@@ -487,7 +490,7 @@ export default function SalesPendingPage() {
                     </tr>
                   ))}
                   <tr className="bg-accent-orange/10 border-b border-card-border">
-                    <td colSpan={10} className="px-4 py-2 text-sm font-semibold text-accent-orange">
+                    <td colSpan={11} className="px-4 py-2 text-sm font-semibold text-accent-orange">
                       Total for Sale #{sale.number}: {peso(sale.visibleTotal)}
                     </td>
                   </tr>
@@ -523,19 +526,24 @@ export default function SalesPendingPage() {
                     <ul className="space-y-1.5">
                       {sale.items.map((item) => (
                         <li key={item.id} className="rounded-lg bg-surface-muted p-2.5 text-xs">
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="min-w-0 font-medium text-text-primary break-words">{item.name}</span>
-                            <span className="shrink-0 font-medium text-text-primary">{peso(item.subTotal)}</span>
+                          <div className="flex items-start gap-2.5">
+                            <ProductThumb src={item.image} alt={item.name} size="w-9 h-9" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <span className="min-w-0 font-medium text-text-primary break-words">{item.name}</span>
+                                <span className="shrink-0 font-medium text-text-primary">{peso(item.subTotal)}</span>
+                              </div>
+                              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-text-muted">
+                                <span>{item.brandName}</span>
+                                <span>Qty: <span className="text-text-secondary">{item.quantity}</span></span>
+                                <span>{peso(item.unitPrice)}</span>
+                                <span className="inline-flex items-center gap-1"><span className={`badge-dot ${paymentDotColor(item.paymentMethod)}`} />{itemPaymentLabel(item)}</span>
+                                <span>{formatDate(item.addedAt ?? sale.createdAt)}</span>
+                              </div>
+                              {!!item.discount && <p className="mt-0.5 text-accent-orange">−{peso(item.discount)} discount</p>}
+                              {item.note && <p className="mt-0.5 text-text-muted break-words">{item.note}</p>}
+                            </div>
                           </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-text-muted">
-                            <span>{item.brandName}</span>
-                            <span>Qty: <span className="text-text-secondary">{item.quantity}</span></span>
-                            <span>{peso(item.unitPrice)}</span>
-                            <span className="inline-flex items-center gap-1"><span className={`badge-dot ${paymentDotColor(item.paymentMethod)}`} />{itemPaymentLabel(item)}</span>
-                            <span>{formatDate(item.addedAt ?? sale.createdAt)}</span>
-                          </div>
-                          {!!item.discount && <p className="mt-0.5 text-accent-orange">−{peso(item.discount)} discount</p>}
-                          {item.note && <p className="mt-0.5 text-text-muted break-words">{item.note}</p>}
                         </li>
                       ))}
                     </ul>
@@ -881,6 +889,7 @@ export default function SalesPendingPage() {
           <table className="hidden w-full md:table">
             <thead>
               <tr className="bg-table-header text-table-header-text">
+                <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase">Image</th>
                 <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase">Product</th>
                 <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase">Brand</th>
                 <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase">Qty</th>
@@ -893,11 +902,12 @@ export default function SalesPendingPage() {
             </thead>
             <tbody>
               {dispLoading ? (
-                <tr><td colSpan={8} className="text-center py-6 text-text-muted"><Loader2 className="inline animate-spin mr-2" size={16} />Loading…</td></tr>
+                <tr><td colSpan={9} className="text-center py-6 text-text-muted"><Loader2 className="inline animate-spin mr-2" size={16} />Loading…</td></tr>
               ) : disposals.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-6 text-text-muted">No pending disposals.</td></tr>
+                <tr><td colSpan={9} className="text-center py-6 text-text-muted">No pending disposals.</td></tr>
               ) : disposals.map((d) => (
                 <tr key={d.id} className="border-b border-card-border/60 transition">
+                  <td className="px-4 py-4"><ProductThumb src={d.image} alt={d.name} /></td>
                   <td className="px-4 py-4 text-sm text-text-primary">{d.name}</td>
                   <td className="px-4 py-4 text-sm text-text-secondary">{d.brandName}</td>
                   <td className="px-4 py-4 text-sm text-text-primary">{d.quantity}</td>
@@ -927,11 +937,14 @@ export default function SalesPendingPage() {
                 {disposals.map((d) => (
                   <li key={d.id} className="p-4">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-text-primary break-words">{d.quantity}× {d.name}</p>
-                        <p className="text-xs text-text-muted">{d.brandName} · {peso(d.value)}</p>
-                        {d.reason && <p className="text-xs text-text-secondary break-words">{d.reason}</p>}
-                        <p className="text-[11px] text-text-muted">{d.createdBy} · {formatDate(d.addedAt ?? d.createdAt)}</p>
+                      <div className="flex min-w-0 items-start gap-2.5">
+                        <ProductThumb src={d.image} alt={d.name} size="w-9 h-9" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-text-primary break-words">{d.quantity}× {d.name}</p>
+                          <p className="text-xs text-text-muted">{d.brandName} · {peso(d.value)}</p>
+                          {d.reason && <p className="text-xs text-text-secondary break-words">{d.reason}</p>}
+                          <p className="text-[11px] text-text-muted">{d.createdBy} · {formatDate(d.addedAt ?? d.createdAt)}</p>
+                        </div>
                       </div>
                       <div className="act-group shrink-0">
                         <button onClick={() => runSafe(async () => { await approveDisposal.mutateAsync(d.id); setActionStatus(`✓ Disposal of ${d.quantity}× ${d.name} approved (stock deducted).`); })} className="act-btn act-approve" title="Approve"><CheckCircle size={16} /></button>

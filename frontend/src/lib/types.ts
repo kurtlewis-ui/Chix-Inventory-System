@@ -157,6 +157,8 @@ export interface SaleLineItem {
   // When this line was originally added to the staff's draft. The backend
   // falls back to the sale's createdAt when it has no per-item value.
   addedAt?: string;
+  // Current product image URL (null if the product was deleted or has none).
+  image?: string | null;
 }
 
 export interface Sale {
@@ -341,6 +343,7 @@ export interface Disposal {
   decidedAt: string | null;
   createdAt: string;
   addedAt?: string; // original draft add-time (falls back to createdAt)
+  image?: string | null; // current product image (null if deleted/none)
 }
 
 export interface DisposalSummary {
