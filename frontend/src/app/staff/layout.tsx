@@ -347,7 +347,7 @@ function DraftBag() {
   const saveDraft = useSaveDraft();
   const clearDraftSync = useClearDraftSync();
   const saveMyDraft = useSaveMyDraft();
-  const { data: myDraftExists } = useMyDraftExists();
+  const { data: myDraftExists, refetch: refetchMyDraft } = useMyDraftExists();
 
   useEffect(() => setMounted(true), []);
 
@@ -478,6 +478,61 @@ function DraftBag() {
         customerName: customerName.trim() || undefined,
       });
       const result = await saveMyDraft.mutateAsync();
+
+      // Guard the "nothing happened" race: saveForStaff claims the draft by
+      // deleting it first, and if the row is gone at that instant (e.g. the
+      // debounced auto-sync's own draft request lost a race, or a retry) it
+      // returns alreadySubmitted:true with an EMPTY result — no sale, no
+      // disposals, no expenses, no errors. Previously that empty-but-errorless
+      // result showed "Order submitted!" even though nothing was created, so a
+      // disposal-only order would vanish (never in Pending Disposals, even
+      // after refresh). Detect that here and DON'T clear/navigate — keep the
+      // cart so the staff can simply hit Save again.
+      const nothingCreated =
+        !result.sale && result.disposals.length === 0 && result.expenses.length === 0;
+      if (nothingCreated && result.errors.length === 0) {
+        // The claim raced and lost (the draft row was gone at delete-time), so
+        // nothing was created by this call. Before retrying, confirm the server
+        // isn't already holding a submitted result for us — a genuine
+        // "already submitted by a concurrent request" must NOT be resubmitted
+        // (that would double-submit). If the server truly has no draft, we
+        // re-stage the cart and retry the submit once so it self-heals without
+        // a second user tap.
+        const draftState = await refetchMyDraft();
+        if (!draftState.data?.exists) {
+          // Re-stage the local cart on the server, then retry the submit once.
+          await saveDraft.mutateAsync({
+            items: items.map(toDraftSaleItemPayload),
+            disposalItems: disposalItems.map(toDraftDisposalItemPayload),
+            expenses: expenses.map(toDraftExpensePayload),
+            customerName: customerName.trim() || undefined,
+          });
+        }
+        const retry = await saveMyDraft.mutateAsync();
+        const retryNothing =
+          !retry.sale && retry.disposals.length === 0 && retry.expenses.length === 0;
+        if (!retryNothing || retry.errors.length > 0) {
+          suppressNextSync.current = true;
+          clear();
+          if (retry.errors.length > 0) {
+            toast.error(`Some items couldn't be submitted: ${retry.errors.join('; ')}`, 'Partly submitted');
+          } else {
+            toast.success('Order submitted! It now awaits admin approval.', 'Order submitted');
+            setOpen(false);
+            router.push('/staff/reports');
+          }
+          return;
+        }
+        // Still nothing after a re-stage + retry. Keep the local cart so the
+        // staff loses nothing, and ask them to try again rather than falsely
+        // telling them the order was submitted.
+        toast.error(
+          "Your order didn't go through — nothing was submitted. Your items are still here; please tap Save Order again.",
+          "Couldn't submit order",
+        );
+        return; // leave the cart intact; no clear(), no navigation
+      }
+
       suppressNextSync.current = true;
       clear();
       if (result.errors.length > 0) {
