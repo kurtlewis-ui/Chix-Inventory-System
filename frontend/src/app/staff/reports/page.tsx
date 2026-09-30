@@ -175,9 +175,13 @@ export default function StaffDailyReportPage() {
     [allSales, search],
   );
 
-  const { data: disposalsData } = useDisposals({ startDate: today, endDate: today });
-  const allDisposals = (disposalsData?.data ?? []).filter((d) => d.status !== 'DECLINED');
-  const todaysDisposals = allDisposals.filter((d) => d.status === 'PENDING');
+  // Pending disposals are shown by STATUS, not date: a disposal the staff
+  // submitted stays visible every day until an Owner/Admin approves (or
+  // declines) it — it does NOT disappear just because the date changed.
+  // Scoped server-side to this staff's OWN submissions. Once approved it flips
+  // to APPROVED and drops off this list (but is preserved in the system).
+  const { data: disposalsData } = useDisposals({ status: 'PENDING' });
+  const pendingDisposals = (disposalsData?.data ?? []).filter((d) => d.status === 'PENDING');
 
   const { data: expensesData } = useExpenses({ startDate: today, endDate: today });
   const allExpenses = (expensesData?.data ?? []).filter((e) => e.status !== 'DECLINED');
@@ -553,13 +557,14 @@ export default function StaffDailyReportPage() {
         );
       })()}
 
-      {/* Today's Disposals — PENDING only */}
+      {/* Pending Disposals — the staff's OWN disposals awaiting approval,
+          shown by status regardless of the date they were submitted. */}
       <div className="mt-6 overflow-x-auto rounded-xl border border-card-border bg-card-bg shadow-sm">
         <div className="border-b border-card-border p-4">
-          <h2 className="text-sm font-bold text-text-primary">Today&apos;s Disposals</h2>
+          <h2 className="text-sm font-bold text-text-primary">Pending Disposals</h2>
         </div>
-        {todaysDisposals.length === 0 ? (
-          <p className="p-4 text-sm text-text-muted">No disposals today.</p>
+        {pendingDisposals.length === 0 ? (
+          <p className="p-4 text-sm text-text-muted">No pending disposals.</p>
         ) : (
           <>
           <table className="hidden w-full md:table">
@@ -575,7 +580,7 @@ export default function StaffDailyReportPage() {
               </tr>
             </thead>
             <tbody>
-              {todaysDisposals.map((d) => (
+              {pendingDisposals.map((d) => (
                 <tr key={d.id} className="border-t border-card-border">
                   <td className="px-4 py-3 text-sm font-medium text-text-primary">
                     {d.name}
@@ -623,7 +628,7 @@ export default function StaffDailyReportPage() {
 
           {/* Mobile: disposal cards (hidden on desktop). */}
           <ul className="divide-y divide-card-border md:hidden">
-            {todaysDisposals.map((d) => (
+            {pendingDisposals.map((d) => (
               <li key={d.id} className="flex items-start justify-between gap-3 p-4">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-text-primary break-words">{d.quantity}× {d.name}</p>
