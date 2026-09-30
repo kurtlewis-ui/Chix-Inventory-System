@@ -374,7 +374,7 @@ export class DisposalsService {
   private includeFull() {
     return {
       branch: { select: { id: true, name: true } },
-      product: { select: { id: true, name: true } },
+      product: { select: { id: true, name: true, image: true } },
       createdBy: { select: { id: true, firstName: true, lastName: true } },
       decidedBy: { select: { firstName: true, lastName: true } },
     } satisfies Prisma.DisposalInclude;
@@ -405,6 +405,8 @@ export class DisposalsService {
       createdAt: d.createdAt,
       // Original draft add-time; falls back to createdAt for pre-feature rows.
       addedAt: d.addedAt ?? d.createdAt,
+      // Current product image (null if the product was deleted or has none).
+      image: d.product?.image ?? null,
     };
   }
 }

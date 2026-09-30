@@ -9,6 +9,7 @@ import { getApiErrorMessage } from '@/lib/api';
 import { usePagination, Pagination } from '@/components/Pagination';
 import { Select } from '@/components/Select';
 import { DateTimeStack } from '@/components/DateTimeStack';
+import { ProductThumb } from '@/components/ProductThumb';
 import { NumberStepper } from '@/components/NumberStepper';
 import { useUnsavedGuard } from '@/lib/useUnsavedGuard';
 import { useStoredBranch } from '@/lib/useStoredBranch';
@@ -84,6 +85,7 @@ export default function DisposalsPage() {
             <thead>
               <tr className="bg-table-header text-table-header-text">
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">#</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Image</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Product</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Brand</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Shop</th>
@@ -97,14 +99,15 @@ export default function DisposalsPage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={10} className="text-center py-8 text-text-muted"><Loader2 className="inline animate-spin mr-2" size={16} />Loading...</td></tr>
+                <tr><td colSpan={11} className="text-center py-8 text-text-muted"><Loader2 className="inline animate-spin mr-2" size={16} />Loading...</td></tr>
               ) : isError ? (
-                <tr><td colSpan={10} className="text-center py-8 text-accent-red">{getApiErrorMessage(error)}</td></tr>
+                <tr><td colSpan={11} className="text-center py-8 text-accent-red">{getApiErrorMessage(error)}</td></tr>
               ) : disposals.length === 0 ? (
-                <tr><td colSpan={10} className="px-4 py-12 text-center text-text-muted">No approved disposals yet.</td></tr>
+                <tr><td colSpan={11} className="px-4 py-12 text-center text-text-muted">No approved disposals yet.</td></tr>
               ) : pagedDisposals.map((d, idx) => (
                 <tr key={d.id} className="border-b border-card-border transition">
                   <td className="px-4 py-3 text-sm text-text-primary">{controlProps.startIdx + idx + 1}</td>
+                  <td className="px-4 py-3"><ProductThumb src={d.image} alt={d.name} /></td>
                   <td className="px-4 py-3 text-sm text-text-primary">{d.name}</td>
                   <td className="px-4 py-3 text-sm text-text-secondary">{d.brandName}</td>
                   <td className="px-4 py-3 text-sm text-text-secondary">{d.branch?.name ?? '—'}</td>
@@ -137,13 +140,15 @@ export default function DisposalsPage() {
                 {pagedDisposals.map((d, idx) => (
                   <li key={d.id} className="p-4">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-text-primary break-words">
-                          <span className="text-text-muted mr-1.5">{controlProps.startIdx + idx + 1}.</span>{d.quantity}× {d.name}
-                        </p>
-                        <p className="text-xs text-text-muted">{d.brandName} · {d.branch?.name ?? '—'} · {peso(d.value)}</p>
-                        {d.reason && <p className="text-xs text-text-secondary break-words">{d.reason}</p>}
-                        <p className="text-[11px] text-text-muted">{d.createdBy} · {formatDate(d.addedAt ?? d.createdAt)}</p>
+                      <div className="flex min-w-0 items-start gap-2.5">
+                        <span className="text-[11px] text-text-muted pt-2">{controlProps.startIdx + idx + 1}.</span>
+                        <ProductThumb src={d.image} alt={d.name} size="w-9 h-9" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-text-primary break-words">{d.quantity}× {d.name}</p>
+                          <p className="text-xs text-text-muted">{d.brandName} · {d.branch?.name ?? '—'} · {peso(d.value)}</p>
+                          {d.reason && <p className="text-xs text-text-secondary break-words">{d.reason}</p>}
+                          <p className="text-[11px] text-text-muted">{d.createdBy} · {formatDate(d.addedAt ?? d.createdAt)}</p>
+                        </div>
                       </div>
                       <span className="shrink-0 badge badge-neutral">
                         <span className={`badge-dot ${d.status === 'APPROVED' ? 'bg-accent-green' : d.status === 'DECLINED' ? 'bg-accent-red' : 'bg-accent-orange'}`} />

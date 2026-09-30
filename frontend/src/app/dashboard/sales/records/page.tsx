@@ -9,6 +9,7 @@ import { getApiErrorMessage } from '@/lib/api';
 import { usePagination, Pagination } from '@/components/Pagination';
 import { Select } from '@/components/Select';
 import { DateTimeStack } from '@/components/DateTimeStack';
+import { ProductThumb } from '@/components/ProductThumb';
 import { useStoredBranch } from '@/lib/useStoredBranch';
 import type { PaymentMethod, PaymentSplit } from '@/lib/types';
 
@@ -156,6 +157,7 @@ export default function SalesRecordsPage() {
             <thead>
               <tr className="bg-table-header text-table-header-text">
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Sale</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Image</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Name</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Quantity</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Brand</th>
@@ -169,11 +171,11 @@ export default function SalesRecordsPage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={10} className="text-center py-8 text-text-muted"><Loader2 className="inline animate-spin mr-2" size={16} />Loading records...</td></tr>
+                <tr><td colSpan={11} className="text-center py-8 text-text-muted"><Loader2 className="inline animate-spin mr-2" size={16} />Loading records...</td></tr>
               ) : isError ? (
-                <tr><td colSpan={10} className="text-center py-8 text-accent-red">{getApiErrorMessage(error)}</td></tr>
+                <tr><td colSpan={11} className="text-center py-8 text-accent-red">{getApiErrorMessage(error)}</td></tr>
               ) : sales.length === 0 ? (
-                <tr><td colSpan={10} className="text-center py-8 text-text-muted">No sales records found.</td></tr>
+                <tr><td colSpan={11} className="text-center py-8 text-text-muted">No sales records found.</td></tr>
               ) : pagedSales.map((sale) => (
                 <Fragment key={sale.id}>
                   {sale.items.map((item, idx) => (
@@ -186,6 +188,7 @@ export default function SalesRecordsPage() {
                           </>
                         )}
                       </td>
+                      <td className="px-4 py-3"><ProductThumb src={item.image} alt={item.name} /></td>
                       <td className="px-4 py-3 text-sm text-text-primary">{item.name}</td>
                       <td className="px-4 py-3 text-sm text-text-primary">{item.quantity}</td>
                       <td className="px-4 py-3 text-sm text-text-secondary">{item.brandName}</td>
@@ -217,7 +220,7 @@ export default function SalesRecordsPage() {
                     </tr>
                   ))}
                   <tr className="bg-accent-orange/10 border-b border-card-border">
-                    <td colSpan={10} className="px-4 py-2 text-sm font-semibold text-accent-orange">
+                    <td colSpan={11} className="px-4 py-2 text-sm font-semibold text-accent-orange">
                       Total for Sale #{sale.number}{sale.branch ? ` (${sale.branch.name})` : ''}: {peso(sale.visibleTotal)}
                     </td>
                   </tr>
@@ -251,18 +254,23 @@ export default function SalesRecordsPage() {
                     <ul className="space-y-1.5">
                       {sale.items.map((item) => (
                         <li key={item.id} className="rounded-lg bg-surface-muted p-2.5 text-xs">
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="min-w-0 font-medium text-text-primary break-words">{item.name}</span>
-                            <span className="shrink-0 font-medium text-text-primary">{peso(item.subTotal)}</span>
+                          <div className="flex items-start gap-2.5">
+                            <ProductThumb src={item.image} alt={item.name} size="w-9 h-9" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <span className="min-w-0 font-medium text-text-primary break-words">{item.name}</span>
+                                <span className="shrink-0 font-medium text-text-primary">{peso(item.subTotal)}</span>
+                              </div>
+                              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-text-muted">
+                                <span>{item.brandName}</span>
+                                <span>Qty: <span className="text-text-secondary">{item.quantity}</span></span>
+                                <span>{peso(item.unitPrice)}</span>
+                                <span className="inline-flex items-center gap-1"><span className={`badge-dot ${paymentDotColor(item.paymentMethod)}`} />{itemPaymentLabel(item)}</span>
+                                <span>{formatDate(item.addedAt ?? sale.createdAt)}</span>
+                              </div>
+                              {!!item.discount && <p className="mt-0.5 text-accent-orange">−{peso(item.discount)} discount</p>}
+                            </div>
                           </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-text-muted">
-                            <span>{item.brandName}</span>
-                            <span>Qty: <span className="text-text-secondary">{item.quantity}</span></span>
-                            <span>{peso(item.unitPrice)}</span>
-                            <span className="inline-flex items-center gap-1"><span className={`badge-dot ${paymentDotColor(item.paymentMethod)}`} />{itemPaymentLabel(item)}</span>
-                            <span>{formatDate(item.addedAt ?? sale.createdAt)}</span>
-                          </div>
-                          {!!item.discount && <p className="mt-0.5 text-accent-orange">−{peso(item.discount)} discount</p>}
                         </li>
                       ))}
                     </ul>

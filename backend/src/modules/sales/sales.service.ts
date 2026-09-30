@@ -702,7 +702,9 @@ export class SalesService {
     return {
       branch: { select: { id: true, name: true } },
       staff: { select: { id: true, firstName: true, lastName: true, email: true } },
-      items: true,
+      // Include each item's current product image (via productId) so item
+      // tables can show a small thumbnail. Null when the product was deleted.
+      items: { include: { product: { select: { image: true } } } },
     } satisfies Prisma.SaleInclude;
   }
 
@@ -742,6 +744,8 @@ export class SalesService {
         // createdAt for rows created before this feature / outside a draft, so
         // the UI always has a per-item timestamp to show.
         addedAt: i.addedAt ?? sale.createdAt,
+        // Current product image (null if the product was deleted or has none).
+        image: i.product?.image ?? null,
       })),
       createdAt: sale.createdAt,
       decidedAt: sale.decidedAt,
