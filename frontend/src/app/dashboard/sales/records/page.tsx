@@ -2,8 +2,7 @@
 
 import { Fragment, useMemo, useState } from 'react';
 import { Search, Loader2 } from 'lucide-react';
-import { useSalesRecords, useBranches, useBranchSummary } from '@/lib/hooks';
-import { useAuthStore } from '@/lib/store';
+import { useSalesRecords, useBranches } from '@/lib/hooks';
 import { filterSalesByProduct } from '@/lib/sale-search';
 import { getApiErrorMessage } from '@/lib/api';
 import { usePagination, Pagination } from '@/components/Pagination';
@@ -69,14 +68,6 @@ export default function SalesRecordsPage() {
   // Pagination runs on the already-filtered list so pages reflect the search.
   const { pageItems: pagedSales, resetPage, controlProps } = usePagination(sales, 10);
 
-  // Today's approved Total Sales / Total Expenses / Net for the selected
-  // shop — always about today, independent of whatever date range the
-  // table above is filtered to. Only meaningful for one shop at a time, so
-  // it's skipped entirely while "All Shops" is selected.
-  const { data: branchSummary } = useBranchSummary(selectedShop || undefined, { enabled: !!selectedShop });
-  // Admin: no Net in the Today strip, and disposals shown at selling price.
-  const isAdmin = useAuthStore((s) => s.user?.role?.name === 'Admin');
-
   const clearFilters = () => {
     setSelectedShop('');
     setStartDate('');
@@ -102,46 +93,6 @@ export default function SalesRecordsPage() {
           <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); resetPage(); }} className="px-3 py-2 border border-input-border rounded-lg text-sm bg-input-bg focus:outline-none focus:ring-2 focus:ring-input-focus" />
         </div>
       </div>
-
-      {/* Today's net for the selected shop — approved sales minus approved
-          expenses, automatically deducted. Independent of the date filters
-          above (which apply to the table), so only shown for one shop. */}
-      {branchSummary && (
-        <div className="bg-card-bg rounded-xl border border-card-border shadow-sm mb-4">
-          <div className="p-4">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">Today (Approved)</p>
-            {/* Admin: 4 columns (no Net) and disposals valued at selling price.
-                Owner: 5 columns incl. Net, disposals at cost (Disposal Losses). */}
-            <div className={`grid grid-cols-2 ${isAdmin ? 'sm:grid-cols-4' : 'sm:grid-cols-5'} gap-3 text-center`}>
-              <div>
-                <p className="text-xs text-text-secondary">Total Gross Sales</p>
-                <p className="text-lg font-bold tabular-nums break-words" style={{ color: '#10b981' }}>{peso(branchSummary.totalGrossSales)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-text-secondary">Total Discount</p>
-                <p className="text-lg font-bold tabular-nums break-words" style={{ color: '#f59e0b' }}>{peso(branchSummary.totalDiscount)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-text-secondary">Total Expenses</p>
-                <p className="text-lg font-bold tabular-nums break-words" style={{ color: '#ef4444' }}>{peso(branchSummary.totalExpenses)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-text-secondary">Total Disposals</p>
-                <p className="text-lg font-bold tabular-nums break-words" style={{ color: '#f97316' }}>{peso(isAdmin ? branchSummary.totalDisposalsSelling : branchSummary.totalDisposals)}</p>
-              </div>
-              {!isAdmin && (
-                <div>
-                  <p className="text-xs text-text-secondary">Net</p>
-                  <p className="text-lg font-bold tabular-nums break-words" style={{ color: branchSummary.net >= 0 ? '#3b82f6' : '#ef4444' }}>{peso(branchSummary.net)}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      {!selectedShop && (
-        <p className="mb-4 text-xs text-text-muted">Select a shop above to see today&apos;s sales total automatically netted against expenses.</p>
-      )}
 
       {/* Table */}
       <div className="bg-card-bg rounded-xl border border-card-border shadow-sm">
