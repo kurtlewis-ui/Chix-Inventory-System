@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, DisposalStatus } from '@prisma/client';
@@ -13,6 +14,8 @@ import { businessDayRange } from '../../common/utils/business-day.util';
 
 @Injectable()
 export class DisposalsService {
+  private readonly logger = new Logger(DisposalsService.name);
+
   constructor(private prisma: PrismaService) {}
 
   /**
@@ -75,6 +78,14 @@ export class DisposalsService {
 
       return created;
     });
+
+    // DIAGNOSTIC: exactly what was persisted, so we can compare against what
+    // the staff's pending-disposals query filters on (status + createdById).
+    this.logger.log(
+      `disposal created id=${disposal.id} status=${disposal.status} ` +
+        `createdById=${disposal.createdById} branchId=${disposal.branchId} ` +
+        `productId=${disposal.productId} qty=${disposal.quantity} actorRole=${actor.role}`,
+    );
 
     return this.serialize(disposal);
   }
@@ -312,6 +323,14 @@ export class DisposalsService {
       ];
     }
 
+    // DIAGNOSTIC: the exact filter this query runs with, for the requesting
+    // actor. Comparing this to the `disposal created ...` log tells us whether
+    // a created row is being filtered out (and by which condition).
+    this.logger.log(
+      `findAll disposals actor=${actor.userId} role=${actor.role} statusArg=${status ?? 'none'} ` +
+        `where=${JSON.stringify(where)}`,
+    );
+
     const [total, disposals, agg] = await Promise.all([
       this.prisma.disposal.count({ where }),
       this.prisma.disposal.findMany({
@@ -323,6 +342,10 @@ export class DisposalsService {
       }),
       this.prisma.disposal.aggregate({ where, _sum: { value: true, quantity: true } }),
     ]);
+
+    this.logger.log(
+      `findAll disposals result actor=${actor.userId} matched=${total} returned=${disposals.length}`,
+    );
 
     return {
       data: disposals.map((d) => this.serialize(d)),

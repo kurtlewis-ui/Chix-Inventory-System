@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpsertDraftDto } from './dto/upsert-draft.dto';
@@ -9,6 +9,8 @@ import { ExpensesService } from '../expenses/expenses.service';
 
 @Injectable()
 export class DraftsService {
+  private readonly logger = new Logger(DraftsService.name);
+
   constructor(
     private prisma: PrismaService,
     private salesService: SalesService,
@@ -207,6 +209,16 @@ export class DraftsService {
     const disposalItems = Array.isArray(draft.disposalItems) ? (draft.disposalItems as any[]) : [];
     const expenseEntries = Array.isArray(draft.expenses) ? (draft.expenses as any[]) : [];
 
+    // DIAGNOSTIC: what did we actually claim for this staff? Confirms whether
+    // the staged disposal items made it into the server draft that we're now
+    // submitting (vs. an empty/partial draft that would explain a vanished
+    // disposal-only order).
+    this.logger.log(
+      `saveForStaff claimed draft ${draft.id} for staff=${staffId} branch=${draft.branchId} ` +
+        `items=${items.length} disposals=${disposalItems.length} expenses=${expenseEntries.length} ` +
+        `disposalProductIds=${JSON.stringify(disposalItems.map((d) => d?.productId))}`,
+    );
+
     const errors: string[] = [];
     let sale: unknown = null;
     let remainingItems = items;
@@ -247,9 +259,18 @@ export class DraftsService {
           ),
         );
       } catch (e: any) {
+        this.logger.error(
+          `saveForStaff disposal FAILED staff=${staffId} product=${d?.productId} qty=${d?.quantity}: ${e?.message ?? 'failed'}`,
+        );
         errors.push(`Dispose ${d.name ?? d.productId}: ${e?.message ?? 'failed'}`);
         remainingDisposals.push(d);
       }
+    }
+    if (disposalItems.length > 0) {
+      this.logger.log(
+        `saveForStaff disposal outcome staff=${staffId}: created=${disposals.length}/${disposalItems.length} ` +
+          `createdIds=${JSON.stringify((disposals as any[]).map((x) => x?.id))}`,
+      );
     }
 
     const expenses: unknown[] = [];
