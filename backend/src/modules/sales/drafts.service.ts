@@ -309,7 +309,12 @@ export class DraftsService {
       throw new BadRequestException(errors.join('; '));
     }
 
-    return { sale, disposals, expenses, errors };
+    // A real submit: at least one part was created here. `alreadySubmitted`
+    // is false so the client can tell this apart from the P2025 "no draft to
+    // claim" early-return above (which reports the SAME empty shape but
+    // created nothing) — the client must not show "Order submitted" when
+    // nothing was actually created.
+    return { sale, disposals, expenses, errors, alreadySubmitted: false };
   }
 
   private async resolveBranchForActor(actor: RequestUser) {

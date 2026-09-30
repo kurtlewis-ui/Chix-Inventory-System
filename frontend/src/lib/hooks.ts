@@ -750,6 +750,11 @@ export interface SaveDraftResult {
   disposals: unknown[];
   expenses: unknown[];
   errors: string[];
+  // True only when the server had NO draft to claim (P2025) — i.e. it was
+  // already submitted by a concurrent/retry request, or nothing was staged.
+  // In that case nothing was created by THIS call, so the client must not
+  // report "Order submitted". A genuine submit returns false.
+  alreadySubmitted?: boolean;
 }
 
 export function useSaveMyDraft() {
