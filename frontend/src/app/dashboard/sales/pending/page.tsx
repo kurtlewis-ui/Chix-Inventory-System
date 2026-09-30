@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Search, Pencil, Trash2, CheckCircle, XCircle, Loader2, Recycle, ShoppingBag, PhilippinePeso, Send, Check } from 'lucide-react';
 import {
   useSalesPending,
@@ -29,6 +30,7 @@ import { ProductThumb } from '@/components/ProductThumb';
 import { withScrollPreserved } from '@/lib/useUnsavedGuard';
 import { useStoredBranch } from '@/lib/useStoredBranch';
 import { filterSalesByProduct } from '@/lib/sale-search';
+import { msUntilNextBusinessDay } from '@/lib/business-day';
 import { useAuthStore } from '@/lib/store';
 import { EditSaleModal } from '@/components/EditSaleModal';
 import type { Sale, PaymentMethod, PaymentSplit } from '@/lib/types';
@@ -230,6 +232,25 @@ export default function SalesPendingPage() {
 
   // Today's approved Total Sales / Total Expenses / Net for the selected branch.
   const { data: branchSummary } = useBranchSummary(selectedShop || undefined);
+
+  // The "Today (Approved)" strip is a PH business-day figure (2 AM–2 AM,
+  // computed server-side). If the page is left open across 2 AM PH it would
+  // keep showing yesterday's totals until a manual refresh. Schedule a one-shot
+  // refetch AT the next 2 AM PH boundary so it resets to the new day on its
+  // own, then re-arm for the following day. (The query also polls, but this
+  // guarantees a clean reset exactly at the boundary.)
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const scheduleNextRollover = () => {
+      timer = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['stats', 'branch-summary'] });
+        scheduleNextRollover(); // re-arm for the next business day
+      }, msUntilNextBusinessDay());
+    };
+    scheduleNextRollover();
+    return () => clearTimeout(timer);
+  }, [queryClient]);
 
   const toast = useToast();
   const [actionError, setActionError] = useState<string | null>(null);

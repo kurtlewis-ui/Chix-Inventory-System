@@ -46,6 +46,24 @@ export function phBusinessToday(): string {
   return ymd(phBusinessNow());
 }
 
+/**
+ * Milliseconds from now until the NEXT PH business-day boundary (the next
+ * 2:00 AM PH). On the "business clock" (real time shifted so midnight = 2 AM
+ * PH), the boundary is the next UTC midnight — so this is the time remaining
+ * until the day part on that clock rolls over. Use it to schedule a one-shot
+ * refresh so "today" views reset exactly at 2 AM PH without a manual reload.
+ */
+export function msUntilNextBusinessDay(): number {
+  const clock = phBusinessNow();
+  const nextMidnight = Date.UTC(
+    clock.getUTCFullYear(),
+    clock.getUTCMonth(),
+    clock.getUTCDate() + 1,
+  );
+  // +1s cushion so we're safely past the boundary when it fires.
+  return nextMidnight - clock.getTime() + 1000;
+}
+
 type QuickRange = 'today' | 'week' | 'month' | 'all';
 
 /**
