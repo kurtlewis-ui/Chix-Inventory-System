@@ -292,11 +292,8 @@ export class DisposalsService {
     if (status) where.status = status;
 
     if (actor.role === 'Staff') {
-      const me = await this.prisma.user.findUnique({
-        where: { id: actor.userId },
-        select: { branchId: true },
-      });
-      where.branchId = me?.branchId ?? '00000000-0000-0000-0000-000000000000';
+      // Staff see only the disposals THEY submitted (not the whole branch).
+      where.createdById = actor.userId;
     } else if (branchId) {
       where.branchId = branchId;
     }
