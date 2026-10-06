@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Pencil, Archive, X, Loader2, Upload, Download, RefreshCw, FileDown, ClipboardList, Trash2, GripVertical, ArrowUpDown, Check, AlertTriangle, ImagePlus } from 'lucide-react';
+import { Plus, Pencil, Archive, X, Loader2, Upload, Download, RefreshCw, FileDown, ClipboardList, Trash2, GripVertical, ArrowUpDown, Check, AlertTriangle, ImagePlus, Store } from 'lucide-react';
 import {
   useProducts,
   useBrands,
@@ -10,6 +10,7 @@ import {
   useUpdateProduct,
   useUpdateProductImage,
   useArchiveProduct,
+  useRemoveProductFromBranch,
   useImportProducts,
   useRestock,
   useUndoStock,
@@ -75,19 +76,36 @@ export default function ProductsPage() {
   // Owner nor Admin); the one remaining non-view control is Export, which we
   // hide too so a Viewer cannot download/exfiltrate the catalog.
   const isViewer = role === 'Viewer';
+  // Per-branch remove ("remove from this shop") is allowed for Owner + Admin,
+  // and only makes sense when a SINGLE shop is selected (not "All Shops").
+  const canRemoveFromBranch = isOwner || isRealAdmin;
+  const selectedBranchName = branches.find((b) => b.id === shopFilter)?.name ?? '';
 
   // Fetch the max the backend allows (200) so ALL products are available for
   // the client-side pagination/slicing below. Without this the query defaulted
   // to 20, so the "Show 50/100/All" control and paging past 20 showed nothing
   // beyond the first 20 rows.
   const { data, isLoading, isError, error } = useProducts({ search, brandId: brandFilter || undefined, limit: 200 });
-  const products = data?.data ?? [];
+  const allProducts = data?.data ?? [];
+  // When a SINGLE shop is selected, hide products that were per-branch archived
+  // ("removed") from that shop — matching what staff/selling see. On "All Shops"
+  // we keep them (they're still alive in other shops; the per-shop quantity
+  // column marks them "Removed from this shop"). The admin list isn't fetched
+  // branch-scoped (it needs every branch's columns), so this filter is applied
+  // client-side here.
+  const products = useMemo(() => {
+    if (!shopFilter) return allProducts;
+    return allProducts.filter(
+      (p) => p.quantities.find((q) => q.branchId === shopFilter)?.archivedAt == null,
+    );
+  }, [allProducts, shopFilter]);
 
   const createProduct = useCreateProduct();
   // silent: the page shows its own success toast (with an Undo action for owners).
   const updateProduct = useUpdateProduct({ silent: true });
   const updateProductImage = useUpdateProductImage();
   const archiveProduct = useArchiveProduct();
+  const removeFromBranch = useRemoveProductFromBranch();
   const reorderProducts = useReorderProducts();
   const undoStock = useUndoStock();
   const resetAllStock = useResetAllStock();
@@ -149,6 +167,8 @@ export default function ProductsPage() {
   // Admin photo-only modal (change just the product image, nothing else).
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [photoProduct, setPhotoProduct] = useState<Product | null>(null);
+  // Per-branch remove ("remove from this shop") confirm modal.
+  const [removeBranchProduct, setRemoveBranchProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [archivingProduct, setArchivingProduct] = useState<Product | null>(null);
   const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
@@ -305,6 +325,17 @@ export default function ProductsPage() {
     } catch (e) { setFormError(getApiErrorMessage(e)); }
   }
 
+  // Per-branch remove: "remove from this shop" (only when a specific shop is
+  // selected). Keeps the product active in every other branch.
+  async function handleRemoveFromBranch() {
+    if (!removeBranchProduct || !shopFilter) return;
+    setFormError(null);
+    try {
+      await removeFromBranch.mutateAsync({ productId: removeBranchProduct.id, branchId: shopFilter });
+      setRemoveBranchProduct(null);
+    } catch (e) { setFormError(getApiErrorMessage(e)); }
+  }
+
   async function handleExport() {
     const targetShops = shopFilter ? branches.filter((b) => b.id === shopFilter) : branches;
     const xlsxProducts: ProductRow[] = products.map((p, idx) => ({
@@ -458,16 +489,21 @@ export default function ProductsPage() {
                       <div className="space-y-0.5">
                         {branches.map((b) => {
                           const qty = qtyForBranch(product, b.id);
+                          const removedHere = product.quantities.find((q) => q.branchId === b.id)?.archivedAt != null;
                           const isOut = qty <= 0;
                           const isLow = !isOut && product.quantityAlert > 0 && qty <= product.quantityAlert;
                           return (
                             <div key={b.id} className="text-xs">
                               <span className="font-semibold text-text-primary">{b.name}:</span>{' '}
-                              <span className={`${isOut ? 'text-accent-red font-medium' : isLow ? 'text-accent-orange font-medium' : 'text-accent-blue'}`}>
-                                {qty}
-                                {isOut && <span className="ml-0.5 text-[9px]">(Out)</span>}
-                                {isLow && <span className="ml-0.5 text-[9px]">(Low)</span>}
-                              </span>
+                              {removedHere ? (
+                                <span className="text-text-muted italic">Removed from this shop</span>
+                              ) : (
+                                <span className={`${isOut ? 'text-accent-red font-medium' : isLow ? 'text-accent-orange font-medium' : 'text-accent-blue'}`}>
+                                  {qty}
+                                  {isOut && <span className="ml-0.5 text-[9px]">(Out)</span>}
+                                  {isLow && <span className="ml-0.5 text-[9px]">(Low)</span>}
+                                </span>
+                              )}
                             </div>
                           );
                         })}
@@ -505,6 +541,7 @@ export default function ProductsPage() {
                       {shopFilter && <button onClick={() => setHistoryProduct(product)} className="icon-btn text-text-secondary hover:bg-white/10" title="Stock History"><ClipboardList size={16} /></button>}
                       {canManage && <button onClick={() => openEditModal(product)} className="icon-btn text-accent-blue hover:bg-accent-blue/10" title="Edit"><Pencil size={16} /></button>}
                       {isRealAdmin && <button onClick={() => openPhotoModal(product)} className="icon-btn text-accent-blue hover:bg-accent-blue/10" title="Change photo"><ImagePlus size={16} /></button>}
+                      {canRemoveFromBranch && shopFilter && <button onClick={() => { setRemoveBranchProduct(product); setFormError(null); }} className="icon-btn text-accent-orange hover:bg-accent-orange/10" title={`Remove from ${selectedBranchName}`}><Store size={16} /></button>}
                       {canArchive && <button onClick={() => { setArchivingProduct(product); setFormError(null); setShowArchiveModal(true); }} className="icon-btn text-accent-archive hover:bg-accent-archive/10" title="Archive"><Archive size={16} /></button>}
                     </div>
                   </td>
@@ -561,6 +598,7 @@ export default function ProductsPage() {
                       {shopFilter && <button onClick={() => setHistoryProduct(product)} className="flex h-12 w-12 items-center justify-center rounded-lg text-text-secondary hover:bg-white/10 transition-colors" title="Stock History" aria-label="Stock history"><ClipboardList size={18} /></button>}
                       {canManage && <button onClick={() => openEditModal(product)} className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-blue hover:bg-accent-blue/10 transition-colors" title="Edit" aria-label={`Edit ${product.name}`}><Pencil size={18} /></button>}
                       {isRealAdmin && <button onClick={() => openPhotoModal(product)} className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-blue hover:bg-accent-blue/10 transition-colors" title="Change photo" aria-label={`Change photo for ${product.name}`}><ImagePlus size={18} /></button>}
+                      {canRemoveFromBranch && shopFilter && <button onClick={() => { setRemoveBranchProduct(product); setFormError(null); }} className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-orange hover:bg-accent-orange/10 transition-colors" title={`Remove from ${selectedBranchName}`} aria-label={`Remove ${product.name} from ${selectedBranchName}`}><Store size={18} /></button>}
                       {canArchive && <button onClick={() => { setArchivingProduct(product); setFormError(null); setShowArchiveModal(true); }} className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-archive hover:bg-accent-archive/10 transition-colors" title="Archive" aria-label={`Archive ${product.name}`}><Archive size={18} /></button>}
                     </div>
                   </div>
@@ -649,6 +687,25 @@ export default function ProductsPage() {
             <div className="flex justify-end gap-2">
               <button onClick={() => { setShowArchiveModal(false); setArchivingProduct(null); }} className="btn-secondary text-text-primary px-4 py-2 rounded text-sm font-medium">Cancel</button>
               <button onClick={handleArchive} disabled={archiveProduct.isPending} className="bg-accent-archive text-white px-4 py-2 rounded text-sm font-medium hover:opacity-90 transition disabled:opacity-60">{archiveProduct.isPending ? 'Archiving...' : 'Yes, Archive'}</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+      {removeBranchProduct && (
+        <Modal title={`Remove from ${selectedBranchName}`} onClose={() => { setRemoveBranchProduct(null); setFormError(null); }}>
+          <div className="space-y-4">
+            <p className="text-sm text-text-primary">
+              Remove <strong>{removeBranchProduct.name}</strong> from <strong>{selectedBranchName}</strong> only?
+            </p>
+            <p className="text-sm text-text-secondary">
+              It will be hidden and can no longer be sold at this shop. It stays available in all other shops. Its stock here is kept, so you can restore it later from <strong>Branch Product Archive</strong>.
+            </p>
+            {formError && <p className="text-sm text-accent-red">{formError}</p>}
+            <div className="flex justify-end gap-2">
+              <button onClick={() => { setRemoveBranchProduct(null); setFormError(null); }} className="btn-secondary text-text-primary px-4 py-2 rounded text-sm font-medium">Cancel</button>
+              <button onClick={handleRemoveFromBranch} disabled={removeFromBranch.isPending} className="bg-accent-orange text-white px-4 py-2 rounded text-sm font-medium hover:opacity-90 transition disabled:opacity-60">
+                {removeFromBranch.isPending ? 'Removing...' : `Remove from ${selectedBranchName}`}
+              </button>
             </div>
           </div>
         </Modal>

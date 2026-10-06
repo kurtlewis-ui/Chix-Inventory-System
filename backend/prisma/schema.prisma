@@ -219,6 +219,14 @@ model Inventory {
   quantity     Int      @default(0)
   // Branch-specific selling price override. If null, uses the product's default sellingPrice.
   sellingPrice Decimal? @map("selling_price") @db.Decimal(10, 2)
+  // Per-branch archive. When set, this product is "removed" from THIS branch
+  // only: it's hidden from that branch's product list and can't be sold there,
+  // while remaining fully active in every other branch. Null = active in this
+  // branch (the default for all existing rows). The quantity is deliberately
+  // KEPT so restoring (clearing this field) brings the branch's stock back
+  // exactly. This is separate from Product.deletedAt, which archives the
+  // product globally across every branch.
+  archivedAt   DateTime? @map("archived_at") @db.Timestamp(6)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
 
   // Relations
@@ -227,6 +235,8 @@ model Inventory {
 
   @@unique([productId, branchId])
   @@index([branchId])
+  // Fast lookups for "active (or archived) products in a branch".
+  @@index([branchId, archivedAt])
   @@map("inventory")
 }
 

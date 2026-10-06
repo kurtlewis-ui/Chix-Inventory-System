@@ -34,7 +34,7 @@ export class SalesService {
       where: { id: { in: productIds }, deletedAt: null, brand: { deletedAt: null } },
       include: {
         brand: { select: { name: true } },
-        inventory: { where: { branchId }, select: { sellingPrice: true } },
+        inventory: { where: { branchId }, select: { sellingPrice: true, archivedAt: true } },
       },
     });
     const productMap = new Map(products.map((p) => [p.id, p]));
@@ -44,6 +44,15 @@ export class SalesService {
 
     if (products.length !== productIds.length) {
       throw new BadRequestException('One or more products are unavailable (archived or from an archived brand).');
+    }
+
+    // Block products that have been per-branch archived at THIS branch — they
+    // must not be sellable here, even though they stay active elsewhere.
+    const branchArchived = products.filter((p) => p.inventory[0]?.archivedAt != null);
+    if (branchArchived.length > 0) {
+      throw new BadRequestException(
+        `One or more products have been removed from this shop and can't be sold here: ${branchArchived.map((p) => p.name).join(', ')}.`,
+      );
     }
 
     const items = this.buildSaleItems(dto.items, productMap, branchPriceMap);
@@ -299,11 +308,18 @@ export class SalesService {
         where: { id: { in: productIds }, deletedAt: null, brand: { deletedAt: null } },
         include: {
           brand: { select: { name: true } },
-          inventory: { where: { branchId: sale.branchId }, select: { sellingPrice: true } },
+          inventory: { where: { branchId: sale.branchId }, select: { sellingPrice: true, archivedAt: true } },
         },
       });
       if (products.length !== productIds.length) {
         throw new BadRequestException('One or more products are unavailable (archived or from an archived brand).');
+      }
+      // Block products per-branch archived at this sale's branch.
+      const branchArchived = products.filter((p) => p.inventory[0]?.archivedAt != null);
+      if (branchArchived.length > 0) {
+        throw new BadRequestException(
+          `One or more products have been removed from this shop and can't be sold here: ${branchArchived.map((p) => p.name).join(', ')}.`,
+        );
       }
       const productMap = new Map(products.map((p) => [p.id, p]));
       const branchPriceMap = new Map(

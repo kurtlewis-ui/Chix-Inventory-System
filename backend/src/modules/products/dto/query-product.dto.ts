@@ -45,4 +45,12 @@ export class QueryProductDto {
   @IsOptional()
   @IsUUID()
   branchId?: string;
+
+  // When a branchId is given, products that are per-branch archived in that
+  // branch are hidden by default. Set this to 'true' to list ONLY the
+  // branch-archived products instead (used by the Branch Product Archive page).
+  @ApiProperty({ required: false, description: 'List only products archived in the given branch' })
+  @IsOptional()
+  @IsString()
+  branchArchived?: string;
 }

@@ -517,6 +517,50 @@ export function useRestoreProduct() {
   });
 }
 
+// ---- Per-branch product archive -------------------------------------------
+// "Remove" a product from ONE branch only (keeps it active in the others).
+
+// List products that are per-branch archived in a given branch (for the
+// Branch Product Archive page). Returns the normal product shape; each row's
+// quantities[] carries the archivedAt marker for the branch.
+export function useBranchArchivedProducts(branchId?: string) {
+  return useQuery({
+    queryKey: ['products', 'branch-archived', { branchId }],
+    enabled: !!branchId,
+    queryFn: () =>
+      getList<Product>('/products', { limit: 1000, branchId, branchArchived: 'true' }),
+  });
+}
+
+// Remove a product from a single branch. The product disappears from that
+// branch's product list + can't be sold there; other branches are unaffected.
+export function useRemoveProductFromBranch() {
+  const invalidate = useInvalidate();
+  const products = useProductCache();
+  const t = useMutationToasts('Product removed from shop');
+  return useMutation({
+    mutationFn: ({ productId, branchId }: { productId: string; branchId: string }) =>
+      api.delete(`/products/${productId}/branch/${branchId}`).then((r) => r.data.data),
+    // Optimistically drop it from the (branch-filtered) product lists so it
+    // disappears immediately, then reconcile with the server.
+    onMutate: ({ productId }) => { products.remove(productId); },
+    onSuccess: () => { products.reconcileInBackground(); invalidate(['products'], ['stats']); t.onSuccess(); },
+    onError: (err) => { products.reconcileInBackground(); t.onError(err); },
+  });
+}
+
+// Restore a product back into a single branch (clears the per-branch archive).
+export function useRestoreProductToBranch() {
+  const invalidate = useInvalidate();
+  const t = useMutationToasts('Product restored to shop');
+  return useMutation({
+    mutationFn: ({ productId, branchId }: { productId: string; branchId: string }) =>
+      api.post(`/products/${productId}/branch/${branchId}/restore`).then((r) => r.data.data),
+    onSuccess: () => { invalidate(['products'], ['stats']); t.onSuccess(); },
+    onError: t.onError,
+  });
+}
+
 // ===========================================================================
 // USERS
 // ===========================================================================
