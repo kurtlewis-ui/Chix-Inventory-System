@@ -57,20 +57,23 @@ export class BrandsController {
     return { success: true, data };
   }
 
+  // Owner may edit everything about a brand. Admin may ONLY change the cover
+  // image (the service strips every other field for an Admin actor), so Admin
+  // is allowed on this route but constrained server-side.
   @Patch(':id')
-  @Roles('Owner')
-  @ApiOperation({ summary: 'Update a brand' })
+  @Roles('Owner', 'Admin')
+  @ApiOperation({ summary: 'Update a brand (Admin: cover image only)' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateBrandDto,
     @CurrentUser() user: RequestUser,
   ) {
-    const data = await this.brandsService.update(id, dto, user.userId);
+    const data = await this.brandsService.update(id, dto, user.userId, user.role);
     return { success: true, data };
   }
 
   @Post(':id/restore')
-  @Roles('Owner')
+  @Roles('Owner', 'Admin')
   @ApiOperation({ summary: 'Restore an archived brand' })
   async restore(
     @Param('id', ParseUUIDPipe) id: string,
@@ -81,7 +84,7 @@ export class BrandsController {
   }
 
   @Delete(':id')
-  @Roles('Owner')
+  @Roles('Owner', 'Admin')
   @ApiOperation({ summary: 'Archive (soft-delete) a brand' })
   async remove(
     @Param('id', ParseUUIDPipe) id: string,

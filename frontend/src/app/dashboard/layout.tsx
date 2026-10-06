@@ -83,7 +83,8 @@ const adminNavItems: NavItem[] = [
   },
   { label: 'Staff', href: '/dashboard/users', icon: <Users size={18} /> },
   { label: 'Activity Logs', href: '/dashboard/activity-logs', icon: <ClipboardList size={18} /> },
-  // Admin archive is Staff-only. The archived-users page already hides Owner
+  // Admin can archive/restore Staff, Shops, Brands and Products (archive +
+  // photo were opened up to Admin). The archived-users page already hides Owner
   // accounts from non-Owners, so it shows just archived Staff for an Admin.
   {
     label: 'Archive',
@@ -91,6 +92,9 @@ const adminNavItems: NavItem[] = [
     icon: <Archive size={18} />,
     dropdown: [
       { label: 'Staff Archive', href: '/dashboard/archive/users' },
+      { label: 'Shops Archive', href: '/dashboard/archive/shops' },
+      { label: 'Products Archive', href: '/dashboard/archive/products' },
+      { label: 'Brands Archive', href: '/dashboard/archive/brands' },
     ],
   },
 ];
