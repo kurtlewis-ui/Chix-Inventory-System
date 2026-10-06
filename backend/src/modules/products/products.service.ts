@@ -131,6 +131,7 @@ export class ProductsService {
 
   async findAll(query: QueryProductDto, role?: string) {
     const { page = 1, limit = 20, search, brandId, branchId } = query;
+    const onlyBranchArchived = query.branchArchived === 'true';
     const skip = (page - 1) * limit;
 
     // Hide archived products AND products whose brand is archived, so an
@@ -141,6 +142,24 @@ export class ProductsService {
     }
     if (brandId) {
       where.brandId = brandId;
+    }
+
+    // Per-branch archive filtering (only meaningful when a single branch is in
+    // view). A product is "removed from branch X" when its inventory row for
+    // branch X has archivedAt set.
+    //   - Normal branch view (onlyBranchArchived = false): HIDE products
+    //     archived in this branch — they must have an inventory row for the
+    //     branch whose archivedAt is null.
+    //   - Branch Product Archive page (onlyBranchArchived = true): show ONLY
+    //     products archived in this branch (archivedAt set for this branch).
+    // With no branchId (All Shops), we don't apply this: a product archived in
+    // one branch is still alive in others, so it should still appear.
+    if (branchId) {
+      if (onlyBranchArchived) {
+        where.inventory = { some: { branchId, archivedAt: { not: null } } };
+      } else {
+        where.inventory = { some: { branchId, archivedAt: null } };
+      }
     }
 
     const [total, products] = await Promise.all([
@@ -369,6 +388,95 @@ export class ProductsService {
     );
 
     return { message: 'Product archived successfully' };
+  }
+
+  /**
+   * Per-branch archive: "remove" a product from ONE branch only. Sets
+   * archivedAt on that branch's inventory row (keeping its quantity, so a
+   * restore brings it back exactly). The product stays fully active in every
+   * other branch. Owner + Admin may do this.
+   */
+  async removeFromBranch(productId: string, branchId: string, actorId: string) {
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, deletedAt: null },
+      select: { id: true, name: true },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    const branch = await this.prisma.branch.findFirst({
+      where: { id: branchId, deletedAt: null },
+      select: { id: true, name: true },
+    });
+    if (!branch) {
+      throw new NotFoundException('Branch not found');
+    }
+
+    // The product must have an inventory row for this branch to be archived
+    // there. (Every product the branch can see has one.) Create-if-missing is
+    // deliberately avoided: if there's no row, there's nothing to remove here.
+    const inv = await this.prisma.inventory.findUnique({
+      where: { productId_branchId: { productId, branchId } },
+    });
+    if (!inv) {
+      throw new BadRequestException('This product has no stock record at that branch.');
+    }
+    if (inv.archivedAt) {
+      throw new BadRequestException('This product is already removed from that branch.');
+    }
+
+    await this.prisma.inventory.update({
+      where: { productId_branchId: { productId, branchId } },
+      data: { archivedAt: new Date() },
+    });
+
+    await this.audit(actorId, 'PRODUCT_BRANCH_ARCHIVED', productId, null, {
+      name: product.name,
+      branchId,
+      branchName: branch.name,
+    });
+
+    return { message: `Removed "${product.name}" from ${branch.name}.` };
+  }
+
+  /**
+   * Restore a product that was per-branch archived back into ONE branch.
+   * Clears archivedAt on that branch's inventory row; the kept quantity
+   * becomes visible/sellable again at that branch.
+   */
+  async restoreToBranch(productId: string, branchId: string, actorId: string) {
+    const inv = await this.prisma.inventory.findUnique({
+      where: { productId_branchId: { productId, branchId } },
+      include: {
+        product: { select: { id: true, name: true, deletedAt: true } },
+        branch: { select: { id: true, name: true, deletedAt: true } },
+      },
+    });
+    if (!inv || !inv.archivedAt) {
+      throw new NotFoundException('No branch-archived product found for that branch.');
+    }
+    // Can't restore into a branch that no longer exists, or a globally-archived
+    // product (restore the product globally first).
+    if (inv.branch.deletedAt) {
+      throw new BadRequestException('That branch is archived. Restore the branch first.');
+    }
+    if (inv.product.deletedAt) {
+      throw new BadRequestException('That product is archived everywhere. Restore the product first.');
+    }
+
+    await this.prisma.inventory.update({
+      where: { productId_branchId: { productId, branchId } },
+      data: { archivedAt: null },
+    });
+
+    await this.audit(actorId, 'PRODUCT_BRANCH_RESTORED', productId, null, {
+      name: inv.product.name,
+      branchId,
+      branchName: inv.branch.name,
+    });
+
+    return { message: `Restored "${inv.product.name}" to ${inv.branch.name}.` };
   }
 
   async restore(id: string, restoredBy: string, role?: string) {
@@ -888,6 +996,7 @@ export class ProductsService {
           branchId: true,
           quantity: true,
           sellingPrice: true,
+          archivedAt: true,
           branch: { select: { id: true, name: true } },
         },
       },
@@ -902,6 +1011,10 @@ export class ProductsService {
       quantity: inv.quantity,
       // If branch has its own price use it; otherwise show product's default
       sellingPrice: inv.sellingPrice != null ? Number(inv.sellingPrice) : defaultPrice,
+      // Per-branch archive marker: when set, the product is removed from THIS
+      // branch only. null = active in this branch. The UI uses this to show
+      // "archived in this branch" and to offer restore on the Branch archive page.
+      archivedAt: inv.archivedAt ?? null,
     }));
     const totalQuantity = quantities.reduce(
       (sum: number, q: any) => sum + q.quantity,

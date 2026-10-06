@@ -140,4 +140,31 @@ export class ProductsController {
     const data = await this.productsService.remove(id, user.userId);
     return { success: true, data };
   }
+
+  // Per-branch archive: remove a product from ONE branch only (Owner + Admin).
+  // The product stays active in every other branch; the branch's stock is kept
+  // so a restore brings it back exactly.
+  @Delete(':id/branch/:branchId')
+  @Roles('Owner', 'Admin')
+  @ApiOperation({ summary: 'Remove a product from a single branch (per-branch archive)' })
+  async removeFromBranch(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('branchId', ParseUUIDPipe) branchId: string,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const data = await this.productsService.removeFromBranch(id, branchId, user.userId);
+    return { success: true, data };
+  }
+
+  @Post(':id/branch/:branchId/restore')
+  @Roles('Owner', 'Admin')
+  @ApiOperation({ summary: 'Restore a product into a single branch (per-branch archive)' })
+  async restoreToBranch(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('branchId', ParseUUIDPipe) branchId: string,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const data = await this.productsService.restoreToBranch(id, branchId, user.userId);
+    return { success: true, data };
+  }
 }

@@ -104,6 +104,10 @@ export interface ProductBranchQuantity {
   branchName: string | null;
   quantity: number;
   sellingPrice: number | null;
+  // Per-branch archive marker. When set, the product is "removed" from THIS
+  // branch only (hidden + not sellable there) while active in other branches.
+  // null = active in this branch.
+  archivedAt?: string | null;
 }
 
 export interface Product {

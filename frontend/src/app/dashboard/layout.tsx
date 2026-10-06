@@ -56,6 +56,7 @@ const ownerNavItems: NavItem[] = [
       { label: 'Shops Archive', href: '/dashboard/archive/shops' },
       { label: 'Products Archive', href: '/dashboard/archive/products' },
       { label: 'Brands Archive', href: '/dashboard/archive/brands' },
+      { label: 'Branch Product Archive', href: '/dashboard/archive/branch-products' },
     ],
   },
 ];
@@ -95,6 +96,7 @@ const adminNavItems: NavItem[] = [
       { label: 'Shops Archive', href: '/dashboard/archive/shops' },
       { label: 'Products Archive', href: '/dashboard/archive/products' },
       { label: 'Brands Archive', href: '/dashboard/archive/brands' },
+      { label: 'Branch Product Archive', href: '/dashboard/archive/branch-products' },
     ],
   },
 ];
