@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import './globals.css';
@@ -17,6 +17,15 @@ export const metadata: Metadata = {
     icon: '/logo.svg',
     apple: '/logo.svg',
   },
+};
+
+// Explicit mobile viewport. Next injects a default, but declaring it here is
+// the documented best practice and makes the mobile behaviour deterministic:
+// render at the device's own width at 1x zoom (so the responsive layouts kick
+// in), while still allowing the user to pinch-zoom for accessibility.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

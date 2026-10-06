@@ -211,7 +211,7 @@ function RecordDisposalModal({ branches, onClose }: { branches: { id: string; na
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={guardedClose} />
-      <div className="glass relative rounded-lg shadow-xl w-full max-w-md mx-4 p-4 sm:p-6">
+      <div className="glass relative rounded-lg shadow-xl w-full max-w-md mx-4 p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-text-primary">Request Disposal</h3>
           <button onClick={guardedClose} className="text-text-muted hover:text-text-primary transition"><X size={20} /></button>
