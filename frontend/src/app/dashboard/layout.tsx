@@ -355,8 +355,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
       {/* Main content area — offset by sidebar width, applies theme */}
       <div className={`lg:ml-[240px] flex-1 flex flex-col min-h-screen content-transition ${contentTheme === 'light' ? 'content-light' : ''}`}>
-        {/* Top bar (mobile only) */}
-        <header className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 bg-[#141414]/95 backdrop-blur-md border-b border-nav-border lg:hidden">
+        {/* Top bar (mobile only). Uses the same solid navy as the sidebar
+            (bg-nav-bg) so the header and side nav read as one surface. */}
+        <header className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 bg-nav-bg border-b border-nav-border lg:hidden">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="flex items-center rounded-lg p-2 text-nav-text hover:text-white hover:bg-white/5 transition-colors"

@@ -214,7 +214,9 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Mobile header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-[#141414]/95 backdrop-blur-md border-b border-nav-border">
+      {/* Mobile header: same solid navy as the sidebar (bg-nav-bg) so the two
+          read as one continuous surface. */}
+      <header className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-nav-bg border-b border-nav-border">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="p-2 rounded-lg text-[#999999] hover:text-white hover:bg-white/5 transition-colors"
