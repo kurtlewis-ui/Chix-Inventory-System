@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   build:
-    name: Prisma generate + Build
+    name: Prisma generate + Build + Test
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -55,3 +55,11 @@ jobs:
       # invalid Prisma queries fail here and turn the PR check red.
       - name: Build
         run: npm run build
+
+      # Run the unit tests. These use a mocked Prisma client (no database), so
+      # they run fast on the CI runner with no services to spin up. A failing
+      # test turns the PR check red — this is the safety net that catches a
+      # change accidentally breaking sales, stock, auth or permissions before
+      # it reaches production.
+      - name: Unit tests
+        run: npm test -- --ci
