@@ -101,16 +101,27 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
-    it('should throw ForbiddenException when account is locked', async () => {
+    // Account lockout was intentionally removed (login attempts are unlimited;
+    // see AuthService.handleFailedLogin — failures are tracked for auditing but
+    // never lock the account). So the `isLocked` flag alone must NOT block a
+    // login with the correct password. This test documents that current
+    // behaviour; it previously (incorrectly) expected a ForbiddenException,
+    // which no longer matches the code.
+    it('allows login when isLocked is true (lockout disabled) with correct password', async () => {
       prisma.user.findUnique.mockResolvedValue({ ...mockUser, isLocked: true });
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashed-token' as never);
+      prisma.session.create.mockResolvedValue({ id: 'session-uuid', tokenVersion: 1 });
+      prisma.session.update.mockResolvedValue({});
+      prisma.user.update.mockResolvedValue(mockUser);
 
-      await expect(
-        service.login(
-          { email: mockUser.email, password: 'password' },
-          '127.0.0.1',
-          'jest',
-        ),
-      ).rejects.toThrow(ForbiddenException);
+      const result = await service.login(
+        { email: mockUser.email, password: 'correct' },
+        '127.0.0.1',
+        'jest',
+      );
+
+      expect(result).toHaveProperty('accessToken');
     });
 
     it('should throw ForbiddenException when account is inactive', async () => {
