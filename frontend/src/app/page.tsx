@@ -15,7 +15,10 @@ export default function Home() {
       router.replace('/login');
       return;
     }
-    router.replace(user?.role?.name === 'Staff' ? '/staff' : '/dashboard');
+    const role = user?.role?.name;
+    const landing =
+      role === 'Staff' ? '/staff' : role === 'Viewer' ? '/dashboard/products' : '/dashboard';
+    router.replace(landing);
   }, [accessToken, user, router]);
 
   return (

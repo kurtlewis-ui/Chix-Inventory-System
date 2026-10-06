@@ -69,6 +69,12 @@ export default function ProductsPage() {
   // enforces the same restriction.
   const isRealAdmin = role === 'Admin';
   const canArchive = isOwner || isRealAdmin;
+  // The read-only Viewer role. Its Products page shows ONLY the catalog + each
+  // product's Stock History (opened via the shop filter + history button). Every
+  // mutating control is already hidden by the flags above (Viewer is neither
+  // Owner nor Admin); the one remaining non-view control is Export, which we
+  // hide too so a Viewer cannot download/exfiltrate the catalog.
+  const isViewer = role === 'Viewer';
 
   // Fetch the max the backend allows (200) so ALL products are available for
   // the client-side pagination/slicing below. Without this the query defaulted
@@ -335,7 +341,8 @@ export default function ProductsPage() {
         <h1 className="text-2xl font-bold text-text-primary">Products</h1>
         <div className="flex items-center gap-2 flex-wrap">
           {canManage && <button onClick={() => setShowImportModal(true)} className="flex items-center gap-1 bg-btn-primary text-btn-primary-text px-3 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition"><Upload size={14} /> Import</button>}
-          <button onClick={handleExport} className="flex items-center gap-1 bg-btn-primary text-btn-primary-text px-3 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition"><Download size={14} /> Export</button>
+          {/* Export is hidden for the read-only Viewer (view-on-screen only). */}
+          {!isViewer && <button onClick={handleExport} className="flex items-center gap-1 bg-btn-primary text-btn-primary-text px-3 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition"><Download size={14} /> Export</button>}
           {canManage && <button onClick={openAddModal} className="flex items-center gap-1 btn-grad px-3 py-2 rounded-lg text-sm font-medium"><Plus size={14} /> Add Product</button>}
         </div>
       </div>

@@ -58,7 +58,20 @@ async function main() {
     },
   });
 
-  console.log('✅ Roles ready (Owner, Admin, Staff)');
+  // Viewer: a strictly read-only role. It can see the Products page and open a
+  // product's stock-movement history, but cannot add, edit, archive, restock
+  // or otherwise change anything. Only an Owner can assign this role.
+  await prisma.role.upsert({
+    where: { name: 'Viewer' },
+    update: {},
+    create: {
+      name: 'Viewer',
+      description: 'Read-only: view products and stock movement history',
+      permissions: { catalog: ['read'] },
+    },
+  });
+
+  console.log('✅ Roles ready (Owner, Admin, Staff, Viewer)');
 
   // 2. Owner account ---------------------------------------------------------
   const ownerPasswordHash = await bcrypt.hash('OwnerPass123!', BCRYPT_ROUNDS);

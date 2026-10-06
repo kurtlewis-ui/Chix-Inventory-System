@@ -12,8 +12,10 @@ import { Roles } from '../../common/decorators/roles.decorator';
 export class StockMovementsController {
   constructor(private readonly stockMovementsService: StockMovementsService) {}
 
+  // Read-only history. Viewer is included alongside Owner/Admin so the
+  // view-only Viewer role can open a product's stock-movement history.
   @Get()
-  @Roles('Owner', 'Admin')
+  @Roles('Owner', 'Admin', 'Viewer')
   findAll(@Query() query: QueryStockMovementDto) {
     return this.stockMovementsService.findAll(query);
   }
