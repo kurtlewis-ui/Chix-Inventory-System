@@ -102,9 +102,14 @@ export class ProductsController {
     return { success: true, data };
   }
 
+  // Owner may edit everything (name, prices, per-branch stock, image). Admin
+  // may ONLY change the image — the service strips every other field for an
+  // Admin actor, so quantity / selling price / cost price can never be touched
+  // (nor seen) by an Admin. Admin is allowed on this route but constrained
+  // server-side.
   @Patch(':id')
-  @Roles('Owner')
-  @ApiOperation({ summary: 'Update a product (and per-branch stock)' })
+  @Roles('Owner', 'Admin')
+  @ApiOperation({ summary: 'Update a product (Admin: image only; Owner: full, incl. per-branch stock)' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateProductDto,
@@ -115,7 +120,7 @@ export class ProductsController {
   }
 
   @Post(':id/restore')
-  @Roles('Owner')
+  @Roles('Owner', 'Admin')
   @ApiOperation({ summary: 'Restore an archived product' })
   async restore(
     @Param('id', ParseUUIDPipe) id: string,
@@ -126,7 +131,7 @@ export class ProductsController {
   }
 
   @Delete(':id')
-  @Roles('Owner')
+  @Roles('Owner', 'Admin')
   @ApiOperation({ summary: 'Archive (soft-delete) a product' })
   async remove(
     @Param('id', ParseUUIDPipe) id: string,

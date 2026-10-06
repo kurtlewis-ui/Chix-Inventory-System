@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Search, Pencil, Archive, X, Loader2 } from 'lucide-react';
+import { Plus, Search, Pencil, Archive, X, Loader2, ImagePlus } from 'lucide-react';
 import {
   useBrands,
   useCreateBrand,
   useUpdateBrand,
+  useUpdateBrandImage,
   useArchiveBrand,
 } from '@/lib/hooks';
 import { getApiErrorMessage } from '@/lib/api';
@@ -30,12 +31,18 @@ export default function BrandsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Brands are part of the catalog — Owner-managed. Admin gets a read-only
-  // view (backend also restricts brand mutations to Owner).
-  const canManage = useAuthStore((s) => s.user?.role?.name === 'Owner');
+  // Brands: Owner can add / edit / archive. Admin can ARCHIVE and change the
+  // PHOTO only (no add, no name edit) — the backend enforces this too (create
+  // stays Owner-only; archive/restore allow Admin; update strips everything but
+  // the cover image for an Admin actor).
+  const role = useAuthStore((s) => s.user?.role?.name);
+  const canManage = role === 'Owner';
+  const canArchive = role === 'Owner' || role === 'Admin';
+  const canEditPhotoOnly = role === 'Admin';
   const { data, isLoading, isError, error } = useBrands(debouncedSearch);
   const createBrand = useCreateBrand();
   const updateBrand = useUpdateBrand();
+  const updateBrandImage = useUpdateBrandImage();
   const archiveBrand = useArchiveBrand();
 
   const brands = data?.data ?? [];
@@ -51,6 +58,9 @@ export default function BrandsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
+  // Admin photo-only modal (change just the cover image, nothing else).
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [photoBrand, setPhotoBrand] = useState<Brand | null>(null);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
   const [archivingBrand, setArchivingBrand] = useState<Brand | null>(null);
   const [formName, setFormName] = useState('');
@@ -60,6 +70,27 @@ export default function BrandsPage() {
 
   const closeAdd = useUnsavedGuard(formDirty, () => setShowAddModal(false));
   const closeEdit = useUnsavedGuard(formDirty, () => { setShowEditModal(false); setEditingBrand(null); });
+  const closePhoto = useUnsavedGuard(formDirty, () => { setShowPhotoModal(false); setPhotoBrand(null); });
+
+  function openPhotoModal(brand: Brand) {
+    setPhotoBrand(brand);
+    setFormCoverImage(brand.coverImage ?? null);
+    setFormError(null);
+    setFormDirty(false);
+    setShowPhotoModal(true);
+  }
+
+  async function handleSavePhoto() {
+    if (!photoBrand) return;
+    setFormError(null);
+    try {
+      await withScrollPreserved(() => updateBrandImage.mutateAsync({ id: photoBrand.id, coverImage: formCoverImage ?? '' }));
+      setFormDirty(false);
+      setFormCoverImage(null);
+      setPhotoBrand(null);
+      setShowPhotoModal(false);
+    } catch (e) { setFormError(getApiErrorMessage(e)); }
+  }
 
   async function handleAdd() {
     if (!formName.trim()) { setFormError('Brand name is required.'); return; }
@@ -163,17 +194,30 @@ export default function BrandsPage() {
                   <td className="px-4 py-3 text-sm font-bold text-text-primary">{brand.name}</td>
                   <td className="px-4 py-3 text-sm text-text-secondary">{brand.productCount}</td>
                   <td className="px-4 py-3 text-right">
-                    {canManage && (
+                    {canArchive && (
                     <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => { setEditingBrand(brand); setFormName(brand.name); setFormCoverImage(brand.coverImage ?? null); setFormError(null); setFormDirty(false); setShowEditModal(true); }}
-                        className="icon-btn text-accent-blue hover:bg-accent-blue/10"
-                      >
-                        <Pencil size={16} />
-                      </button>
+                      {canManage && (
+                        <button
+                          onClick={() => { setEditingBrand(brand); setFormName(brand.name); setFormCoverImage(brand.coverImage ?? null); setFormError(null); setFormDirty(false); setShowEditModal(true); }}
+                          className="icon-btn text-accent-blue hover:bg-accent-blue/10"
+                          title="Edit"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      )}
+                      {canEditPhotoOnly && (
+                        <button
+                          onClick={() => openPhotoModal(brand)}
+                          className="icon-btn text-accent-blue hover:bg-accent-blue/10"
+                          title="Change photo"
+                        >
+                          <ImagePlus size={16} />
+                        </button>
+                      )}
                       <button
                         onClick={() => { setArchivingBrand(brand); setFormError(null); setShowArchiveModal(true); }}
                         className="icon-btn text-accent-archive hover:bg-accent-archive/10"
+                        title="Archive"
                       >
                         <Archive size={16} />
                       </button>
@@ -212,15 +256,29 @@ export default function BrandsPage() {
                     </p>
                     <p className="text-xs text-text-secondary">Products: {brand.productCount}</p>
                   </div>
-                  {canManage && (
+                  {canArchive && (
                   <div className="flex shrink-0 items-center gap-1">
-                    <button
-                      onClick={() => { setEditingBrand(brand); setFormName(brand.name); setFormCoverImage(brand.coverImage ?? null); setFormError(null); setFormDirty(false); setShowEditModal(true); }}
-                      className="flex h-10 w-10 items-center justify-center rounded-lg text-accent-blue hover:bg-accent-blue/10"
-                    ><Pencil size={16} /></button>
+                    {canManage && (
+                      <button
+                        onClick={() => { setEditingBrand(brand); setFormName(brand.name); setFormCoverImage(brand.coverImage ?? null); setFormError(null); setFormDirty(false); setShowEditModal(true); }}
+                        className="flex h-10 w-10 items-center justify-center rounded-lg text-accent-blue hover:bg-accent-blue/10"
+                        title="Edit"
+                        aria-label={`Edit ${brand.name}`}
+                      ><Pencil size={16} /></button>
+                    )}
+                    {canEditPhotoOnly && (
+                      <button
+                        onClick={() => openPhotoModal(brand)}
+                        className="flex h-10 w-10 items-center justify-center rounded-lg text-accent-blue hover:bg-accent-blue/10"
+                        title="Change photo"
+                        aria-label={`Change photo for ${brand.name}`}
+                      ><ImagePlus size={16} /></button>
+                    )}
                     <button
                       onClick={() => { setArchivingBrand(brand); setFormError(null); setShowArchiveModal(true); }}
                       className="flex h-10 w-10 items-center justify-center rounded-lg text-accent-archive hover:bg-accent-archive/10"
+                      title="Archive"
+                      aria-label={`Archive ${brand.name}`}
                     ><Archive size={16} /></button>
                   </div>
                   )}
@@ -286,6 +344,21 @@ export default function BrandsPage() {
             <div className="flex justify-end gap-2">
               <button onClick={() => { setShowArchiveModal(false); setArchivingBrand(null); }} className="btn-secondary text-text-primary px-4 py-2 rounded text-sm font-medium">Cancel</button>
               <button onClick={handleArchive} disabled={archiveBrand.isPending} className="bg-accent-archive text-white px-4 py-2 rounded text-sm font-medium hover:opacity-90 transition disabled:opacity-60">{archiveBrand.isPending ? 'Archiving...' : 'Yes, Archive'}</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Admin photo-only modal: change JUST the cover image. No name or other
+          fields are shown or sent. */}
+      {showPhotoModal && photoBrand && (
+        <Modal title="Change Brand Photo" onClose={closePhoto}>
+          <div className="space-y-4" onInput={() => setFormDirty(true)}>
+            <p className="text-sm text-text-secondary">Update the cover image for <strong className="text-text-primary">{photoBrand.name}</strong>.</p>
+            <CoverImageField coverImage={formCoverImage} setCoverImage={setFormCoverImage} onDirty={() => setFormDirty(true)} />
+            {formError && <p className="text-sm text-accent-red">{formError}</p>}
+            <div className="flex justify-end">
+              <button onClick={handleSavePhoto} disabled={updateBrandImage.isPending} className="btn-grad px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-60">{updateBrandImage.isPending ? 'Saving...' : 'Save Photo'}</button>
             </div>
           </div>
         </Modal>

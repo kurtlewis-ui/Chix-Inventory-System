@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Pencil, Archive, X, Loader2, Upload, Download, RefreshCw, FileDown, ClipboardList, Trash2, GripVertical, ArrowUpDown, Check, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Archive, X, Loader2, Upload, Download, RefreshCw, FileDown, ClipboardList, Trash2, GripVertical, ArrowUpDown, Check, AlertTriangle, ImagePlus } from 'lucide-react';
 import {
   useProducts,
   useBrands,
   useBranches,
   useCreateProduct,
   useUpdateProduct,
+  useUpdateProductImage,
   useArchiveProduct,
   useImportProducts,
   useRestock,
@@ -55,10 +56,19 @@ export default function ProductsPage() {
   // Stock History, but every mutating control is hidden. `canManage` therefore
   // means "is the Owner"; `isOwner` is kept as an explicit alias for the few
   // Owner-only extras (cost price field, Reset Stock, undo).
-  const isOwner = useAuthStore((s) => s.user?.role?.name === 'Owner');
+  const role = useAuthStore((s) => s.user?.role?.name);
+  const isOwner = role === 'Owner';
   const canManage = isOwner;
-  // Kept for readability where the old name was used to gate management UI.
+  // Kept for readability where the old name was used to gate management UI
+  // (full add/edit/restock/reorder/reset). This is Owner-only, NOT the actual
+  // Admin role — see `isRealAdmin` below.
   const isAdmin = canManage;
+  // The ACTUAL Admin role. Admin may ONLY archive a product and change its
+  // image (via a dedicated image-only button) — never quantity, selling price
+  // or cost (those fields are never even rendered for Admin). The backend
+  // enforces the same restriction.
+  const isRealAdmin = role === 'Admin';
+  const canArchive = isOwner || isRealAdmin;
 
   // Fetch the max the backend allows (200) so ALL products are available for
   // the client-side pagination/slicing below. Without this the query defaulted
@@ -70,6 +80,7 @@ export default function ProductsPage() {
   const createProduct = useCreateProduct();
   // silent: the page shows its own success toast (with an Undo action for owners).
   const updateProduct = useUpdateProduct({ silent: true });
+  const updateProductImage = useUpdateProductImage();
   const archiveProduct = useArchiveProduct();
   const reorderProducts = useReorderProducts();
   const undoStock = useUndoStock();
@@ -129,6 +140,9 @@ export default function ProductsPage() {
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showRestockModal, setShowRestockModal] = useState(false);
+  // Admin photo-only modal (change just the product image, nothing else).
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [photoProduct, setPhotoProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [archivingProduct, setArchivingProduct] = useState<Product | null>(null);
   const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
@@ -263,6 +277,26 @@ export default function ProductsPage() {
     if (!archivingProduct) return;
     try { await archiveProduct.mutateAsync(archivingProduct.id); setArchivingProduct(null); setShowArchiveModal(false); }
     catch (e) { setFormError(getApiErrorMessage(e)); }
+  }
+
+  // Admin: open the image-only modal. Prefills the current image; NO quantity,
+  // price or cost is loaded or shown.
+  function openPhotoModal(product: Product) {
+    setPhotoProduct(product);
+    setFormImage(product.image ?? null);
+    setFormError(null);
+    setFormDirty(false);
+    setShowPhotoModal(true);
+  }
+  async function handleSavePhoto() {
+    if (!photoProduct) return;
+    setFormError(null);
+    try {
+      await withScrollPreserved(() => updateProductImage.mutateAsync({ id: photoProduct.id, image: formImage ?? '' }));
+      setFormDirty(false);
+      setPhotoProduct(null);
+      setShowPhotoModal(false);
+    } catch (e) { setFormError(getApiErrorMessage(e)); }
   }
 
   async function handleExport() {
@@ -462,8 +496,9 @@ export default function ProductsPage() {
                   <td className="px-3 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       {shopFilter && <button onClick={() => setHistoryProduct(product)} className="icon-btn text-text-secondary hover:bg-white/10" title="Stock History"><ClipboardList size={16} /></button>}
-                      {canManage && <button onClick={() => openEditModal(product)} className="icon-btn text-accent-blue hover:bg-accent-blue/10"><Pencil size={16} /></button>}
-                      {canManage && <button onClick={() => { setArchivingProduct(product); setFormError(null); setShowArchiveModal(true); }} className="icon-btn text-accent-archive hover:bg-accent-archive/10"><Archive size={16} /></button>}
+                      {canManage && <button onClick={() => openEditModal(product)} className="icon-btn text-accent-blue hover:bg-accent-blue/10" title="Edit"><Pencil size={16} /></button>}
+                      {isRealAdmin && <button onClick={() => openPhotoModal(product)} className="icon-btn text-accent-blue hover:bg-accent-blue/10" title="Change photo"><ImagePlus size={16} /></button>}
+                      {canArchive && <button onClick={() => { setArchivingProduct(product); setFormError(null); setShowArchiveModal(true); }} className="icon-btn text-accent-archive hover:bg-accent-archive/10" title="Archive"><Archive size={16} /></button>}
                     </div>
                   </td>
                 </tr>
@@ -518,7 +553,8 @@ export default function ProductsPage() {
                     <div className="flex shrink-0 items-center">
                       {shopFilter && <button onClick={() => setHistoryProduct(product)} className="flex h-12 w-12 items-center justify-center rounded-lg text-text-secondary hover:bg-white/10 transition-colors" title="Stock History" aria-label="Stock history"><ClipboardList size={18} /></button>}
                       {canManage && <button onClick={() => openEditModal(product)} className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-blue hover:bg-accent-blue/10 transition-colors" title="Edit" aria-label={`Edit ${product.name}`}><Pencil size={18} /></button>}
-                      {canManage && <button onClick={() => { setArchivingProduct(product); setFormError(null); setShowArchiveModal(true); }} className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-archive hover:bg-accent-archive/10 transition-colors" title="Archive" aria-label={`Archive ${product.name}`}><Archive size={18} /></button>}
+                      {isRealAdmin && <button onClick={() => openPhotoModal(product)} className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-blue hover:bg-accent-blue/10 transition-colors" title="Change photo" aria-label={`Change photo for ${product.name}`}><ImagePlus size={18} /></button>}
+                      {canArchive && <button onClick={() => { setArchivingProduct(product); setFormError(null); setShowArchiveModal(true); }} className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-archive hover:bg-accent-archive/10 transition-colors" title="Archive" aria-label={`Archive ${product.name}`}><Archive size={18} /></button>}
                     </div>
                   </div>
 
@@ -609,6 +645,18 @@ export default function ProductsPage() {
             </div>
           </div>
         </Modal>
+      )}
+      {showPhotoModal && photoProduct && (
+        <ProductPhotoModal
+          productName={photoProduct.name}
+          image={formImage}
+          setImage={setFormImage}
+          onDirty={() => setFormDirty(true)}
+          onClose={() => { setShowPhotoModal(false); setPhotoProduct(null); }}
+          onSave={handleSavePhoto}
+          saving={updateProductImage.isPending}
+          error={formError}
+        />
       )}
       {showImportModal && <ImportModal branches={branches} onClose={() => setShowImportModal(false)} />}
       {showRestockModal && <RestockModal products={products} branches={branches} isOwner={isOwner} onClose={() => setShowRestockModal(false)} />}
@@ -1055,5 +1103,70 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
         {children}
       </div>
     </div>
+  );
+}
+
+// Admin-only "Change photo" modal. Deliberately renders ONLY the product image
+// controls (preview + file picker + cropper + remove) — no name, brand,
+// quantity, selling price or cost price is shown or editable here. The paired
+// backend route strips every non-image field for an Admin, so an Admin can
+// never read or change those values.
+function ProductPhotoModal({ productName, image, setImage, onDirty, onClose, onSave, saving, error }: {
+  productName: string;
+  image: string | null;
+  setImage: (v: string | null) => void;
+  onDirty: () => void;
+  onClose: () => void;
+  onSave: () => void;
+  saving?: boolean;
+  error?: string | null;
+}) {
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+
+  return (
+    <Modal title="Change Product Photo" onClose={onClose}>
+      <div className="space-y-4" onInput={onDirty}>
+        <p className="text-sm text-text-secondary">Update the image for <strong className="text-text-primary">{productName}</strong>.</p>
+        <div className="flex items-center gap-4">
+          <div className="w-20 h-20 rounded bg-white/10 overflow-hidden flex items-center justify-center shrink-0 border border-card-border">
+            {image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={image} alt="Product preview" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-[10px] text-text-muted">No Image</span>
+            )}
+          </div>
+          <div className="flex-1 space-y-2">
+            <div className="border border-input-border rounded-lg px-3 py-2 flex items-center gap-2 bg-input-bg">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => { if (e.target.files?.[0]) { setImageError(null); setCropFile(e.target.files[0]); } e.currentTarget.value = ''; }}
+                className="w-full text-xs text-text-secondary file:mr-2 file:py-1.5 file:px-3 file:rounded file:border file:border-input-border file:bg-btn-primary file:text-btn-primary-text file:text-xs file:cursor-pointer"
+              />
+            </div>
+            {image && (
+              <button type="button" onClick={() => { setImage(null); setImageError(null); onDirty(); }} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-accent-red/10 border border-accent-red/30 text-xs font-medium text-accent-red hover:bg-accent-red/20 transition-colors">
+                <X size={12} /> Remove
+              </button>
+            )}
+            {imageError && <p className="text-xs text-accent-red">{imageError}</p>}
+          </div>
+        </div>
+        {error && <p className="text-sm text-accent-red">{error}</p>}
+        <div className="flex justify-end">
+          <button onClick={onSave} disabled={saving} className="btn-grad px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-60">{saving ? 'Saving...' : 'Save Photo'}</button>
+        </div>
+      </div>
+      {cropFile && (
+        <ImageCropModal
+          file={cropFile}
+          title="Crop product image"
+          onCancel={() => setCropFile(null)}
+          onCropped={(dataUrl) => { setImage(dataUrl); setCropFile(null); onDirty(); }}
+        />
+      )}
+    </Modal>
   );
 }

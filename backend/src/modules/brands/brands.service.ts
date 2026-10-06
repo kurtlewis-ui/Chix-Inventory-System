@@ -124,7 +124,7 @@ export class BrandsService {
     return this.serialize(brand);
   }
 
-  async update(id: string, dto: UpdateBrandDto, updatedBy: string) {
+  async update(id: string, dto: UpdateBrandDto, updatedBy: string, role?: string) {
     const current = await this.prisma.brand.findFirst({
       where: { id, deletedAt: null },
     });
@@ -132,8 +132,14 @@ export class BrandsService {
       throw new NotFoundException('Brand not found');
     }
 
+    // Admin may ONLY change the cover image. Ignore every other field they
+    // send (name, isActive, …) regardless of the payload — enforced here so
+    // the restriction holds even if the request is crafted by hand, not just
+    // via the UI. Owner edits are unrestricted.
+    const isAdminOnlyImage = role === 'Admin';
+
     const data: any = {};
-    if (dto.name !== undefined) {
+    if (!isAdminOnlyImage && dto.name !== undefined) {
       const name = dto.name.trim();
       if (name.toLowerCase() !== current.name.toLowerCase()) {
         const conflict = await this.prisma.brand.findFirst({
@@ -150,10 +156,11 @@ export class BrandsService {
       data.name = name;
       data.slug = slugify(name);
     }
+    // Cover image is the ONLY field an Admin may change (and the Owner may too).
     if (dto.coverImage !== undefined) {
       data.coverImage = await this.upload.uploadDataUrl(dto.coverImage?.trim() || null, 'brands');
     }
-    if (dto.isActive !== undefined) {
+    if (!isAdminOnlyImage && dto.isActive !== undefined) {
       data.isActive = dto.isActive;
     }
 

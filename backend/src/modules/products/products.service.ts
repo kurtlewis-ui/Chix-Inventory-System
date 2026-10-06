@@ -209,6 +209,30 @@ export class ProductsService {
       throw new NotFoundException('Product not found');
     }
 
+    // Admin may ONLY change the product image. We short-circuit here so an
+    // Admin request can never touch name, brand, selling price, cost price,
+    // low-stock alert, OR per-branch quantities — regardless of what the
+    // payload contains. This is enforced server-side (not just hidden in the
+    // UI) so a hand-crafted request can't bypass it. Owner edits fall through
+    // to the full logic below.
+    if (role === 'Admin') {
+      const data: any = {};
+      if (dto.image !== undefined) {
+        data.image = await this.upload.uploadDataUrl(dto.image?.trim() || null, 'products');
+      }
+      await this.prisma.product.update({ where: { id }, data });
+
+      await this.audit(updatedBy, 'PRODUCT_IMAGE_UPDATED', id, { name: current.name }, { image: data.image ?? null });
+
+      const updatedForAdmin = await this.prisma.product.findUnique({
+        where: { id },
+        include: this.includeFull(),
+      });
+      // Admins never receive owner-only fields; undoMovementIds is always empty
+      // because an image-only edit changes no stock.
+      return { ...this.serialize(updatedForAdmin!, false), undoMovementIds: [] as string[] };
+    }
+
     if (dto.brandId) {
       const brand = await this.prisma.brand.findFirst({
         where: { id: dto.brandId, deletedAt: null },

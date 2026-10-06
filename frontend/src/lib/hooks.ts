@@ -263,6 +263,20 @@ export function useUpdateBrand() {
   });
 }
 
+// Admin-only: change ONLY a brand's cover image. Sends just { coverImage } so
+// no other field (name, isActive) is ever touched — the backend also strips
+// everything but the image for an Admin actor. Pass null/'' to clear it.
+export function useUpdateBrandImage() {
+  const invalidate = useInvalidate();
+  const t = useMutationToasts('Brand photo updated');
+  return useMutation({
+    mutationFn: ({ id, coverImage }: { id: string; coverImage: string | null }) =>
+      api.patch(`/brands/${id}`, { coverImage }).then((r) => r.data.data),
+    onSuccess: () => { invalidate(['brands']); t.onSuccess(); },
+    onError: t.onError,
+  });
+}
+
 export function useArchiveBrand() {
   const invalidate = useInvalidate();
   const t = useMutationToasts('Brand archived');
@@ -441,6 +455,26 @@ export function useUpdateProduct(opts?: { silent?: boolean }) {
       products.reconcileInBackground();
       invalidate(['product'], ['stats']);
       if (!opts?.silent) t.onSuccess();
+    },
+    onError: t.onError,
+  });
+}
+
+// Admin-only: change ONLY a product's image. Sends just { image } so quantity,
+// selling price, cost price, name and brand are never touched — the backend
+// also strips everything but the image for an Admin actor. Pass '' to clear.
+export function useUpdateProductImage() {
+  const invalidate = useInvalidate();
+  const products = useProductCache();
+  const t = useMutationToasts('Product photo updated');
+  return useMutation({
+    mutationFn: ({ id, image }: { id: string; image: string }) =>
+      api.patch(`/products/${id}`, { image }).then((r) => r.data.data as Product),
+    onSuccess: (result) => {
+      products.upsert(result as unknown as Product);
+      products.reconcileInBackground();
+      invalidate(['product']);
+      t.onSuccess();
     },
     onError: t.onError,
   });

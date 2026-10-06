@@ -70,7 +70,7 @@ export class BranchesController {
   }
 
   @Post(':id/restore')
-  @Roles('Owner')
+  @Roles('Owner', 'Admin')
   @ApiOperation({ summary: 'Restore an archived branch' })
   @ApiResponse({ status: 200, description: 'Branch restored' })
   @ApiResponse({ status: 404, description: 'Archived branch not found' })
@@ -97,9 +97,9 @@ export class BranchesController {
   }
 
   @Delete(':id')
-  @Roles('Owner')
+  @Roles('Owner', 'Admin')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete a branch (soft delete)' })
+  @ApiOperation({ summary: 'Archive a branch (soft delete)' })
   @ApiResponse({ status: 200, description: 'Branch deleted' })
   @ApiResponse({
     status: 400,

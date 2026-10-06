@@ -16,9 +16,12 @@ import { useAuthStore } from '@/lib/store';
 import type { Branch } from '@/lib/types';
 
 export default function ShopsPage() {
-  // Shops are Owner-managed. Admin gets a strictly read-only view (no add /
-  // edit / archive) — the backend enforces this too (branches are Owner-only).
-  const canManage = useAuthStore((s) => s.user?.role?.name === 'Owner');
+  // Shops: Owner can add / edit / archive. Admin can ARCHIVE only (no add,
+  // no edit) — the backend enforces this split too (create/update stay
+  // Owner-only; archive/restore now allow Admin).
+  const role = useAuthStore((s) => s.user?.role?.name);
+  const canManage = role === 'Owner';
+  const canArchive = role === 'Owner' || role === 'Admin';
   const { data, isLoading, isError, error } = useBranches();
   const createBranch = useCreateBranch();
   const updateBranch = useUpdateBranch();
@@ -154,15 +157,17 @@ export default function ShopsPage() {
                   <td className="px-4 py-3 text-sm text-text-secondary">{shop.address || '—'}</td>
                   <td className="px-4 py-3 text-sm text-text-secondary">{shop.staffCount}</td>
                   <td className="px-4 py-3 text-right">
-                    {canManage && (
+                    {canArchive && (
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => { setEditingShop(shop); setNewName(shop.name); setNewAddress(shop.address ?? ''); setFormError(null); setFormDirty(false); setShowEditModal(true); }}
-                          className="icon-btn text-accent-blue hover:bg-accent-blue/10"
-                          title="Edit"
-                        >
-                          <Pencil size={16} />
-                        </button>
+                        {canManage && (
+                          <button
+                            onClick={() => { setEditingShop(shop); setNewName(shop.name); setNewAddress(shop.address ?? ''); setFormError(null); setFormDirty(false); setShowEditModal(true); }}
+                            className="icon-btn text-accent-blue hover:bg-accent-blue/10"
+                            title="Edit"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                        )}
                         <button
                           onClick={() => { setArchivingShop(shop); setFormError(null); setShowArchiveModal(true); }}
                           className="icon-btn text-accent-archive hover:bg-accent-archive/10"
@@ -201,16 +206,18 @@ export default function ShopsPage() {
                       <p className="mt-1 text-sm text-text-secondary break-words">{shop.address || '—'}</p>
                       <p className="mt-1 text-xs text-text-muted">Staff: <span className="text-text-secondary">{shop.staffCount}</span></p>
                     </div>
-                    {canManage && (
+                    {canArchive && (
                       <div className="flex shrink-0 items-center gap-1">
-                        <button
-                          onClick={() => { setEditingShop(shop); setNewName(shop.name); setNewAddress(shop.address ?? ''); setFormError(null); setFormDirty(false); setShowEditModal(true); }}
-                          className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-blue hover:bg-accent-blue/10 transition-colors"
-                          title="Edit"
-                          aria-label={`Edit ${shop.name}`}
-                        >
-                          <Pencil size={18} />
-                        </button>
+                        {canManage && (
+                          <button
+                            onClick={() => { setEditingShop(shop); setNewName(shop.name); setNewAddress(shop.address ?? ''); setFormError(null); setFormDirty(false); setShowEditModal(true); }}
+                            className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-blue hover:bg-accent-blue/10 transition-colors"
+                            title="Edit"
+                            aria-label={`Edit ${shop.name}`}
+                          >
+                            <Pencil size={18} />
+                          </button>
+                        )}
                         <button
                           onClick={() => { setArchivingShop(shop); setFormError(null); setShowArchiveModal(true); }}
                           className="flex h-12 w-12 items-center justify-center rounded-lg text-accent-archive hover:bg-accent-archive/10 transition-colors"
