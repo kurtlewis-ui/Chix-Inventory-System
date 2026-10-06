@@ -40,14 +40,17 @@ export default function LoginPage() {
       const { accessToken, user } = response.data.data;
       setAuth(accessToken, user);
       // Landing route by role: Staff → their portal; Admin → Sales/Pending
-      // (Admin has no Dashboard page); Owner → Dashboard.
+      // (Admin has no Dashboard page); Viewer → Products (its only page);
+      // Owner → Dashboard.
       const role = user.role?.name;
       const landing =
         role === 'Staff'
           ? '/staff'
           : role === 'Admin'
             ? '/dashboard/sales/pending'
-            : '/dashboard';
+            : role === 'Viewer'
+              ? '/dashboard/products'
+              : '/dashboard';
       router.replace(landing);
     } catch (err) {
       // Show a single, generic, professional message for any bad-credentials

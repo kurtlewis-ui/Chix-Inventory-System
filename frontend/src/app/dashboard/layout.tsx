@@ -99,6 +99,14 @@ const adminNavItems: NavItem[] = [
   },
 ];
 
+// Viewer is a strictly read-only role: its ONLY page is Products (view the
+// catalog + open each product's stock-movement history). No add/edit/archive,
+// no other sections. The Products page itself hides every mutating control for
+// a Viewer, and the backend denies all mutations.
+const viewerNavItems: NavItem[] = [
+  { label: 'Products', href: '/dashboard/products', icon: <Package size={18} /> },
+];
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -142,8 +150,18 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       router.replace('/login');
     } else if (mounted && user && user.role?.name === 'Staff') {
       router.replace('/staff');
+    } else if (
+      mounted &&
+      user &&
+      user.role?.name === 'Viewer' &&
+      !pathname.startsWith('/dashboard/products') &&
+      pathname !== '/dashboard/settings'
+    ) {
+      // Viewer may ONLY be on the Products page (and its own Settings). Any
+      // other dashboard URL (typed directly or linked) bounces back to Products.
+      router.replace('/dashboard/products');
     }
-  }, [mounted, accessToken, user, router]);
+  }, [mounted, accessToken, user, router, pathname]);
 
   function handleLogout() {
     logout();
@@ -155,8 +173,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     setThemeAnimKey((k) => k + 1);
   }
 
-  const isAdmin = user?.role?.name === 'Admin';
-  const navItems = isAdmin ? adminNavItems : ownerNavItems;
+  const roleName = user?.role?.name;
+  const isAdmin = roleName === 'Admin';
+  const isViewer = roleName === 'Viewer';
+  const navItems = isViewer ? viewerNavItems : isAdmin ? adminNavItems : ownerNavItems;
 
   const isActive = (item: NavItem) => {
     if (item.href === '/dashboard') return pathname === '/dashboard';
