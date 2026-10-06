@@ -52,10 +52,12 @@ const ownerNavItems: NavItem[] = [
     href: '/dashboard/archive',
     icon: <Archive size={18} />,
     dropdown: [
+      // Ordered by domain, parent before child: people, locations, then the
+      // catalog (Brands → Products → per-branch Products).
       { label: 'Users Archive', href: '/dashboard/archive/users' },
       { label: 'Shops Archive', href: '/dashboard/archive/shops' },
-      { label: 'Products Archive', href: '/dashboard/archive/products' },
       { label: 'Brands Archive', href: '/dashboard/archive/brands' },
+      { label: 'Products Archive', href: '/dashboard/archive/products' },
       { label: 'Branch Product Archive', href: '/dashboard/archive/branch-products' },
     ],
   },
@@ -92,10 +94,12 @@ const adminNavItems: NavItem[] = [
     href: '/dashboard/archive',
     icon: <Archive size={18} />,
     dropdown: [
+      // Ordered by domain, parent before child: people, locations, then the
+      // catalog (Brands → Products → per-branch Products).
       { label: 'Staff Archive', href: '/dashboard/archive/users' },
       { label: 'Shops Archive', href: '/dashboard/archive/shops' },
-      { label: 'Products Archive', href: '/dashboard/archive/products' },
       { label: 'Brands Archive', href: '/dashboard/archive/brands' },
+      { label: 'Products Archive', href: '/dashboard/archive/products' },
       { label: 'Branch Product Archive', href: '/dashboard/archive/branch-products' },
     ],
   },
