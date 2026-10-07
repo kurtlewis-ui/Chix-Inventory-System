@@ -582,7 +582,7 @@ export default function StaffDailyReportPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Product</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Brand</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Qty</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Value</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Price</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Reason</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Date</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Actions</th>
@@ -597,7 +597,7 @@ export default function StaffDailyReportPage() {
                   </td>
                   <td className="px-4 py-3 text-sm text-text-secondary">{d.brandName}</td>
                   <td className="px-4 py-3 text-sm text-text-primary">{d.quantity}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-text-primary">{peso(d.value)}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-text-primary">{peso(d.sellingValue)}</td>
                   <td className="px-4 py-3 text-sm text-text-secondary">{d.reason ?? '—'}</td>
                   <td className="px-4 py-3 text-sm"><DateTimeStack iso={d.addedAt ?? d.createdAt} /></td>
                   <td className="px-4 py-3">
@@ -649,7 +649,7 @@ export default function StaffDailyReportPage() {
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
-                  <span className="text-sm font-medium text-text-primary">{peso(d.value)}</span>
+                  <span className="text-sm font-medium text-text-primary">{peso(d.sellingValue)}</span>
                   {canManageDisposal(d) && (
                     confirmDeleteDisposalId === d.id ? (
                       <div className="flex items-center gap-1">
