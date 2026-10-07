@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpsertDraftDto } from './dto/upsert-draft.dto';
@@ -22,6 +22,10 @@ export class DraftsService {
    * empty draft around once every section is empty.
    */
   async upsertMine(dto: UpsertDraftDto, actor: RequestUser) {
+    // Viewer is strictly read-only — it must not build a draft cart either.
+    if (actor.role === 'Viewer') {
+      throw new ForbiddenException('Viewer accounts are read-only.');
+    }
     const disposalItems = dto.disposalItems ?? [];
     const expenses = dto.expenses ?? [];
 
