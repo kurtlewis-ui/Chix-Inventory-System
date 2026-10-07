@@ -227,10 +227,17 @@ export function useRestoreBranch() {
 // ===========================================================================
 // BRANDS
 // ===========================================================================
-export function useBrands(search?: string) {
+export function useBrands(search?: string, branchId?: string) {
   return useQuery({
-    queryKey: ['brands', { search }],
-    queryFn: () => getList<Brand>('/brands', { limit: 200, search: search || undefined }),
+    // branchId is part of the key so the per-branch product counts refetch when
+    // the selected shop changes.
+    queryKey: ['brands', { search, branchId: branchId || null }],
+    queryFn: () =>
+      getList<Brand>('/brands', {
+        limit: 200,
+        search: search || undefined,
+        branchId: branchId || undefined,
+      }),
   });
 }
 

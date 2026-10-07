@@ -59,7 +59,7 @@ export class BrandsService {
   }
 
   async findAll(query: QueryBrandDto) {
-    const { page = 1, limit = 50, search } = query;
+    const { page = 1, limit = 50, search, branchId } = query;
     const skip = (page - 1) * limit;
 
     const where: any = { deletedAt: null };
@@ -81,8 +81,31 @@ export class BrandsService {
       }),
     ]);
 
+    // Per-branch product counts. The default `_count.products` is global (every
+    // product in the brand, branch-blind), which is what caused a brand to show
+    // e.g. "2 products" while a branch actually sees none. When a branchId is
+    // given, replace the count with the number of products ACTIVE IN THAT BRANCH
+    // — the exact same rule the products list uses: product not globally
+    // archived, and it has an inventory row for this branch that isn't
+    // per-branch archived. Computed in ONE groupBy over the shown brands.
+    let branchCounts: Map<string, number> | null = null;
+    if (branchId) {
+      const grouped = await this.prisma.product.groupBy({
+        by: ['brandId'],
+        where: {
+          brandId: { in: brands.map((b) => b.id) },
+          deletedAt: null,
+          inventory: { some: { branchId, archivedAt: null } },
+        },
+        _count: { _all: true },
+      });
+      branchCounts = new Map(grouped.map((g) => [g.brandId, g._count._all]));
+    }
+
     return {
-      data: brands.map((b) => this.serialize(b)),
+      data: brands.map((b) =>
+        this.serialize(b, branchCounts ? branchCounts.get(b.id) ?? 0 : undefined),
+      ),
       pagination: this.paginate(page, limit, total),
     };
   }
@@ -232,14 +255,16 @@ export class BrandsService {
     return this.serialize(restored);
   }
 
-  private serialize(brand: BrandRow) {
+  // `branchProductCount`, when provided (a per-branch request), overrides the
+  // global `_count.products` so the UI shows the count for the selected branch.
+  private serialize(brand: BrandRow, branchProductCount?: number) {
     return {
       id: brand.id,
       name: brand.name,
       slug: brand.slug,
       coverImage: brand.coverImage,
       isActive: brand.isActive,
-      productCount: brand._count?.products ?? 0,
+      productCount: branchProductCount ?? brand._count?.products ?? 0,
       createdAt: brand.createdAt,
       updatedAt: brand.updatedAt,
       deletedAt: brand.deletedAt,

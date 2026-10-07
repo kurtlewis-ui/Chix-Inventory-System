@@ -18,7 +18,10 @@ export default function StaffHomePage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const branchName = useAuthStore((s) => s.user?.branch?.name);
   const branchId = useAuthStore((s) => s.user?.branch?.id);
-  const { data, isLoading, isError, error } = useBrands(debouncedSearch);
+  // Pass the staff's branch so each brand's productCount reflects ONLY products
+  // active in their shop (not a global count) — otherwise a brand could show
+  // "2 products" yet open to an empty list.
+  const { data, isLoading, isError, error } = useBrands(debouncedSearch, branchId);
   const brands = data?.data ?? [];
 
   // Also fetch products when there's a search query (for cross-brand product
@@ -70,11 +73,19 @@ export default function StaffHomePage() {
           {/* Brand Grid */}
           {brands.length > 0 && (
             <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {brands.map((brand) => (
+              {brands.map((brand) => {
+                // A brand with no products in THIS branch is shown but not
+                // tappable (it would open an empty list). Disable it so staff
+                // never land on a dead-end page.
+                const isEmpty = brand.productCount === 0;
+                return (
                 <button
                   key={brand.id}
                   onClick={() => router.push(`/staff/brands/${brand.id}`)}
-                  className="tile-hover group flex flex-col overflow-hidden rounded-xl border border-card-border bg-card-bg text-left shadow-sm hover:border-input-focus"
+                  disabled={isEmpty}
+                  aria-disabled={isEmpty}
+                  title={isEmpty ? 'No products in your shop' : undefined}
+                  className={`tile-hover group flex flex-col overflow-hidden rounded-xl border border-card-border bg-card-bg text-left shadow-sm ${isEmpty ? 'cursor-not-allowed opacity-50' : 'hover:border-input-focus'}`}
                 >
                   {/* Solid (not translucent) background: a semi-transparent fill
                       (bg-white/5) was mis-clipped by iOS Safari on this rounded,
@@ -94,7 +105,8 @@ export default function StaffHomePage() {
                     <p className="text-xs text-text-secondary">{brand.productCount} product{brand.productCount === 1 ? '' : 's'}</p>
                   </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           )}
 
