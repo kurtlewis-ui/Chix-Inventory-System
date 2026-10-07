@@ -374,10 +374,41 @@ export class DisposalsService {
   private includeFull() {
     return {
       branch: { select: { id: true, name: true } },
-      product: { select: { id: true, name: true, image: true } },
+      // Include the product's default selling price AND this disposal's branch
+      // inventory row, so serialize() can expose a SELLING-price valuation
+      // (`sellingValue`) for staff. The disposal's own `value` stays cost-based
+      // for the Owner's P&L — selling price is only used for the extra field.
+      product: {
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          sellingPrice: true,
+          inventory: { select: { branchId: true, sellingPrice: true } },
+        },
+      },
       createdBy: { select: { id: true, firstName: true, lastName: true } },
       decidedBy: { select: { firstName: true, lastName: true } },
     } satisfies Prisma.DisposalInclude;
+  }
+
+  /**
+   * Selling-price valuation of a disposal (quantity × the branch's selling
+   * price, falling back to the product's default). Used only for the
+   * `sellingValue` field that staff see — the stored `value` stays cost-based
+   * for the Owner's financials. Returns 0 when the product no longer exists.
+   */
+  private sellingValueFor(d: any): number {
+    const product = d.product;
+    if (!product) return 0;
+    const branchInv = (product.inventory ?? []).find(
+      (inv: any) => inv.branchId === d.branchId,
+    );
+    const unit =
+      branchInv?.sellingPrice != null
+        ? Number(branchInv.sellingPrice)
+        : Number(product.sellingPrice ?? 0);
+    return unit * d.quantity;
   }
 
   private serialize(d: any) {
@@ -389,7 +420,13 @@ export class DisposalsService {
       brandName: d.brandName,
       quantity: d.quantity,
       unitPrice: Number(d.unitPrice),
+      // Cost-based value (snapshotted at disposal time). Confidential — used by
+      // the Owner's P&L / summaries / charts. NOT shown to staff.
       value: Number(d.value),
+      // SELLING-price valuation for staff-facing views (never exposes cost).
+      // Prefers the disposal branch's own inventory price, falling back to the
+      // product's default selling price; 0 if the product was deleted.
+      sellingValue: this.sellingValueFor(d),
       reason: d.reason,
       status: d.status,
       createdBy: d.createdBy

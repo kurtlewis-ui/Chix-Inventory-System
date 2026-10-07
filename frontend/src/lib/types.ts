@@ -338,7 +338,8 @@ export interface Disposal {
   brandName: string;
   quantity: number;
   unitPrice: number;
-  value: number;
+  value: number; // cost-based (Owner financials; not shown to staff)
+  sellingValue: number; // selling-price valuation (staff-facing)
   reason: string | null;
   status: 'PENDING' | 'APPROVED' | 'DECLINED';
   createdBy: string;
