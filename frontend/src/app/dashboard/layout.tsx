@@ -54,12 +54,14 @@ const ownerNavItems: NavItem[] = [
     dropdown: [
       // Ordered by domain, parent before child: people, locations, then the
       // catalog (Brands → Products → per-branch Products).
+      // Each global archive sits next to its per-branch version:
+      // Users -> Shops -> Brands (+ Branch Brand) -> Products (+ Branch Product).
       { label: 'Users Archive', href: '/dashboard/archive/users' },
       { label: 'Shops Archive', href: '/dashboard/archive/shops' },
       { label: 'Brands Archive', href: '/dashboard/archive/brands' },
+      { label: 'Branch Brand Archive', href: '/dashboard/archive/branch-brands' },
       { label: 'Products Archive', href: '/dashboard/archive/products' },
       { label: 'Branch Product Archive', href: '/dashboard/archive/branch-products' },
-      { label: 'Branch Brand Archive', href: '/dashboard/archive/branch-brands' },
     ],
   },
 ];
@@ -97,12 +99,14 @@ const adminNavItems: NavItem[] = [
     dropdown: [
       // Ordered by domain, parent before child: people, locations, then the
       // catalog (Brands → Products → per-branch Products).
+      // Each global archive sits next to its per-branch version:
+      // Staff -> Shops -> Brands (+ Branch Brand) -> Products (+ Branch Product).
       { label: 'Staff Archive', href: '/dashboard/archive/users' },
       { label: 'Shops Archive', href: '/dashboard/archive/shops' },
       { label: 'Brands Archive', href: '/dashboard/archive/brands' },
+      { label: 'Branch Brand Archive', href: '/dashboard/archive/branch-brands' },
       { label: 'Products Archive', href: '/dashboard/archive/products' },
       { label: 'Branch Product Archive', href: '/dashboard/archive/branch-products' },
-      { label: 'Branch Brand Archive', href: '/dashboard/archive/branch-brands' },
     ],
   },
 ];
