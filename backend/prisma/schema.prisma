@@ -122,6 +122,7 @@ model Branch {
   draftOrders    DraftOrder[]
   expenses       Expense[]
   stockMovements StockMovement[]
+  brandArchives  BranchBrandArchive[]
 
   @@index([isActive])
   @@map("branches")
@@ -170,11 +171,37 @@ model Brand {
   deletedAt  DateTime? @map("deleted_at") @db.Timestamp(6)
 
   // Relations
-  products Product[]
+  products       Product[]
+  branchArchives BranchBrandArchive[]
 
   @@index([deletedAt])
   @@index([slug])
   @@map("brands")
+}
+
+// Per-branch brand archive: "remove" a whole brand from a SINGLE branch while
+// it stays active in every other branch. Brands have no per-branch row of their
+// own (unlike products, which have Inventory), so this join table records which
+// (brand, branch) pairs are archived. The PRESENCE of a row = archived in that
+// branch; no row = active there (the default for everything, so this is purely
+// additive). This is independent of Brand.deletedAt (the GLOBAL brand archive)
+// and of Inventory.archivedAt (the per-branch PRODUCT archive): a product is
+// hidden/unsellable in a branch if its brand is globally archived, OR its brand
+// is archived in that branch (this table), OR the product itself is archived
+// globally or in that branch.
+model BranchBrandArchive {
+  id         String   @id @default(uuid()) @db.Uuid
+  brandId    String   @map("brand_id") @db.Uuid
+  branchId   String   @map("branch_id") @db.Uuid
+  archivedAt DateTime @default(now()) @map("archived_at") @db.Timestamp(6)
+
+  // Relations
+  brand  Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, branchId])
+  @@index([branchId])
+  @@map("branch_brand_archives")
 }
 
 model Product {
