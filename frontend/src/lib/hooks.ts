@@ -304,6 +304,46 @@ export function useRestoreBrand() {
   });
 }
 
+// ---- Per-branch brand archive ---------------------------------------------
+// "Remove" a brand from ONE branch (hides the brand + its products there,
+// unsellable), keeping it active in other branches.
+
+// List brands that are per-branch archived in a given branch (Branch Brand
+// Archive page). Products refresh too since hiding/showing a brand changes
+// which products appear in that branch.
+export function useBranchArchivedBrands(branchId?: string) {
+  return useQuery({
+    queryKey: ['brands', 'branch-archived', { branchId }],
+    enabled: !!branchId,
+    queryFn: () =>
+      getList<Brand>('/brands', { limit: 200, branchId, branchArchived: 'true' }),
+  });
+}
+
+export function useRemoveBrandFromBranch() {
+  const invalidate = useInvalidate();
+  const t = useMutationToasts('Brand removed from shop');
+  return useMutation({
+    mutationFn: ({ brandId, branchId }: { brandId: string; branchId: string }) =>
+      api.delete(`/brands/${brandId}/branch/${branchId}`).then((r) => r.data.data),
+    // A brand's archive changes which products show in that branch, so refresh
+    // both brands and products.
+    onSuccess: () => { invalidate(['brands'], ['products'], ['stats']); t.onSuccess(); },
+    onError: t.onError,
+  });
+}
+
+export function useRestoreBrandToBranch() {
+  const invalidate = useInvalidate();
+  const t = useMutationToasts('Brand restored to shop');
+  return useMutation({
+    mutationFn: ({ brandId, branchId }: { brandId: string; branchId: string }) =>
+      api.post(`/brands/${brandId}/branch/${branchId}/restore`).then((r) => r.data.data),
+    onSuccess: () => { invalidate(['brands'], ['products'], ['stats']); t.onSuccess(); },
+    onError: t.onError,
+  });
+}
+
 // ===========================================================================
 // PRODUCTS
 // ===========================================================================

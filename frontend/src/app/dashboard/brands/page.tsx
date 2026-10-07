@@ -1,18 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Search, Pencil, Archive, X, Loader2, ImagePlus } from 'lucide-react';
+import { Plus, Search, Pencil, Archive, X, Loader2, ImagePlus, Store } from 'lucide-react';
 import {
   useBrands,
+  useBranches,
   useCreateBrand,
   useUpdateBrand,
   useUpdateBrandImage,
   useArchiveBrand,
+  useRemoveBrandFromBranch,
 } from '@/lib/hooks';
 import { getApiErrorMessage } from '@/lib/api';
 import { ImageCropModal } from '@/components/ImageCropModal';
 import { Select } from '@/components/Select';
 import { useUnsavedGuard, withScrollPreserved } from '@/lib/useUnsavedGuard';
+import { useStoredBranch } from '@/lib/useStoredBranch';
 import { useAuthStore } from '@/lib/store';
 import type { Brand } from '@/lib/types';
 
@@ -39,11 +42,24 @@ export default function BrandsPage() {
   const canManage = role === 'Owner';
   const canArchive = role === 'Owner' || role === 'Admin';
   const canEditPhotoOnly = role === 'Admin';
-  const { data, isLoading, isError, error } = useBrands(debouncedSearch);
+  // Per-branch brand remove ("Remove from [shop]") — Owner + Admin, and only
+  // when a single shop is selected (not "All Shops").
+  const canRemoveFromBranch = role === 'Owner' || role === 'Admin';
+
+  // Shared, persisted shop filter (same as the Products page). '' = All Shops.
+  const { data: branchData } = useBranches();
+  const branches = branchData?.data ?? [];
+  const [shopFilter, setShopFilter] = useStoredBranch(branches);
+  const selectedBranchName = branches.find((b) => b.id === shopFilter)?.name ?? '';
+
+  // When a shop is selected, the brand list + product counts are scoped to that
+  // branch (brands archived there are hidden; counts are per-branch).
+  const { data, isLoading, isError, error } = useBrands(debouncedSearch, shopFilter || undefined);
   const createBrand = useCreateBrand();
   const updateBrand = useUpdateBrand();
   const updateBrandImage = useUpdateBrandImage();
   const archiveBrand = useArchiveBrand();
+  const removeBrandFromBranch = useRemoveBrandFromBranch();
 
   const brands = data?.data ?? [];
 
@@ -63,6 +79,8 @@ export default function BrandsPage() {
   const [photoBrand, setPhotoBrand] = useState<Brand | null>(null);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
   const [archivingBrand, setArchivingBrand] = useState<Brand | null>(null);
+  // Per-branch remove ("remove brand from this shop") confirm modal.
+  const [removeBranchBrand, setRemoveBranchBrand] = useState<Brand | null>(null);
   const [formName, setFormName] = useState('');
   const [formCoverImage, setFormCoverImage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -126,6 +144,17 @@ export default function BrandsPage() {
     } catch (e) { setFormError(getApiErrorMessage(e)); }
   }
 
+  // Per-branch remove: "remove brand from this shop" (only when a shop is
+  // selected). Keeps the brand active in every other shop.
+  async function handleRemoveFromBranch() {
+    if (!removeBranchBrand || !shopFilter) return;
+    setFormError(null);
+    try {
+      await removeBrandFromBranch.mutateAsync({ brandId: removeBranchBrand.id, branchId: shopFilter });
+      setRemoveBranchBrand(null);
+    } catch (e) { setFormError(getApiErrorMessage(e)); }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -142,11 +171,16 @@ export default function BrandsPage() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <label className="flex items-center gap-2 text-sm text-text-secondary">
-          Show
-          <Select value={String(pageSize)} onChange={(v) => { setPageSize(v === 'All' ? 'All' : (Number(v) as PageSize)); setCurrentPage(1); }} ariaLabel="Entries per page" className="w-auto min-w-[80px]" options={PAGE_SIZES.map((s) => ({ value: String(s), label: String(s) }))} />
-          entries
-        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-text-secondary">
+            Show
+            <Select value={String(pageSize)} onChange={(v) => { setPageSize(v === 'All' ? 'All' : (Number(v) as PageSize)); setCurrentPage(1); }} ariaLabel="Entries per page" className="w-auto min-w-[80px]" options={PAGE_SIZES.map((s) => ({ value: String(s), label: String(s) }))} />
+            entries
+          </label>
+          {/* Shop filter: when a single shop is chosen, counts are per-branch and
+              a "Remove from [shop]" action appears per brand. */}
+          <Select value={shopFilter} onChange={(v) => { setShopFilter(v); setCurrentPage(1); }} ariaLabel="Shop filter" className="w-auto min-w-[160px]" options={[{ value: '', label: 'All Shops' }, ...branches.map((b) => ({ value: b.id, label: b.name }))]} />
+        </div>
         <div className="relative max-w-sm">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input
@@ -214,6 +248,15 @@ export default function BrandsPage() {
                           <ImagePlus size={16} />
                         </button>
                       )}
+                      {canRemoveFromBranch && shopFilter && (
+                        <button
+                          onClick={() => { setRemoveBranchBrand(brand); setFormError(null); }}
+                          className="icon-btn text-accent-orange hover:bg-accent-orange/10"
+                          title={`Remove from ${selectedBranchName}`}
+                        >
+                          <Store size={16} />
+                        </button>
+                      )}
                       <button
                         onClick={() => { setArchivingBrand(brand); setFormError(null); setShowArchiveModal(true); }}
                         className="icon-btn text-accent-archive hover:bg-accent-archive/10"
@@ -273,6 +316,14 @@ export default function BrandsPage() {
                         title="Change photo"
                         aria-label={`Change photo for ${brand.name}`}
                       ><ImagePlus size={16} /></button>
+                    )}
+                    {canRemoveFromBranch && shopFilter && (
+                      <button
+                        onClick={() => { setRemoveBranchBrand(brand); setFormError(null); }}
+                        className="flex h-10 w-10 items-center justify-center rounded-lg text-accent-orange hover:bg-accent-orange/10"
+                        title={`Remove from ${selectedBranchName}`}
+                        aria-label={`Remove ${brand.name} from ${selectedBranchName}`}
+                      ><Store size={16} /></button>
                     )}
                     <button
                       onClick={() => { setArchivingBrand(brand); setFormError(null); setShowArchiveModal(true); }}
@@ -359,6 +410,27 @@ export default function BrandsPage() {
             {formError && <p className="text-sm text-accent-red">{formError}</p>}
             <div className="flex justify-end">
               <button onClick={handleSavePhoto} disabled={updateBrandImage.isPending} className="btn-grad px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-60">{updateBrandImage.isPending ? 'Saving...' : 'Save Photo'}</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Per-branch remove: hide this brand (and its products) from ONE shop. */}
+      {removeBranchBrand && (
+        <Modal title={`Remove from ${selectedBranchName}`} onClose={() => { setRemoveBranchBrand(null); setFormError(null); }}>
+          <div className="space-y-4">
+            <p className="text-sm text-text-primary">
+              Remove <strong>{removeBranchBrand.name}</strong> from <strong>{selectedBranchName}</strong> only?
+            </p>
+            <p className="text-sm text-text-secondary">
+              This brand and all its products will be hidden and can no longer be sold at this shop. It stays available in all other shops. You can restore it later from <strong>Branch Brand Archive</strong>.
+            </p>
+            {formError && <p className="text-sm text-accent-red">{formError}</p>}
+            <div className="flex justify-end gap-2">
+              <button onClick={() => { setRemoveBranchBrand(null); setFormError(null); }} className="btn-secondary text-text-primary px-4 py-2 rounded text-sm font-medium">Cancel</button>
+              <button onClick={handleRemoveFromBranch} disabled={removeBrandFromBranch.isPending} className="bg-accent-orange text-white px-4 py-2 rounded text-sm font-medium hover:opacity-90 transition disabled:opacity-60">
+                {removeBrandFromBranch.isPending ? 'Removing...' : `Remove from ${selectedBranchName}`}
+              </button>
             </div>
           </div>
         </Modal>
