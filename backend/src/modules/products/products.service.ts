@@ -159,6 +159,11 @@ export class ProductsService {
         where.inventory = { some: { branchId, archivedAt: { not: null } } };
       } else {
         where.inventory = { some: { branchId, archivedAt: null } };
+        // Also hide products whose BRAND is per-branch archived in this branch:
+        // archiving a brand in a branch removes all its products from that
+        // branch too (brand + product archive are independent layers — a
+        // product shows only if BOTH its brand and itself are active here).
+        where.brand = { ...(where.brand ?? {}), branchArchives: { none: { branchId } } };
       }
     }
 

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -60,6 +61,7 @@ export class BrandsService {
 
   async findAll(query: QueryBrandDto) {
     const { page = 1, limit = 50, search, branchId } = query;
+    const onlyBranchArchived = query.branchArchived === 'true';
     const skip = (page - 1) * limit;
 
     const where: any = { deletedAt: null };
@@ -68,6 +70,21 @@ export class BrandsService {
         { name: { contains: search, mode: 'insensitive' } },
         { slug: { contains: search, mode: 'insensitive' } },
       ];
+    }
+
+    // Per-branch brand archive filtering (only when a single branch is in view).
+    // A brand is "removed from branch X" when it has a BranchBrandArchive row
+    // for X.
+    //   - Normal branch view: HIDE brands archived in this branch.
+    //   - Branch Brand Archive page (onlyBranchArchived): show ONLY those.
+    // No branchId (All Shops): don't apply — a brand archived in one branch is
+    // still alive in others, so it should still appear.
+    if (branchId) {
+      if (onlyBranchArchived) {
+        where.branchArchives = { some: { branchId } };
+      } else {
+        where.branchArchives = { none: { branchId } };
+      }
     }
 
     const [total, brands] = await Promise.all([
@@ -220,6 +237,83 @@ export class BrandsService {
     await this.audit(deletedBy, 'BRAND_ARCHIVED', id, { name: brand.name }, null);
 
     return { message: 'Brand archived successfully' };
+  }
+
+  /**
+   * Per-branch archive: "remove" a brand from ONE branch only. The brand (and
+   * all its products) become hidden + unsellable in that branch, while staying
+   * active in every other branch. Independent of the global archive and of the
+   * per-branch PRODUCT archive. Owner + Admin.
+   */
+  async removeFromBranch(brandId: string, branchId: string, actorId: string) {
+    const brand = await this.prisma.brand.findFirst({
+      where: { id: brandId, deletedAt: null },
+      select: { id: true, name: true },
+    });
+    if (!brand) {
+      throw new NotFoundException('Brand not found');
+    }
+    const branch = await this.prisma.branch.findFirst({
+      where: { id: branchId, deletedAt: null },
+      select: { id: true, name: true },
+    });
+    if (!branch) {
+      throw new NotFoundException('Branch not found');
+    }
+
+    const existing = await this.prisma.branchBrandArchive.findUnique({
+      where: { brandId_branchId: { brandId, branchId } },
+    });
+    if (existing) {
+      throw new BadRequestException('This brand is already removed from that branch.');
+    }
+
+    await this.prisma.branchBrandArchive.create({ data: { brandId, branchId } });
+
+    await this.audit(actorId, 'BRAND_BRANCH_ARCHIVED', brandId, null, {
+      name: brand.name,
+      branchId,
+      branchName: branch.name,
+    });
+
+    return { message: `Removed "${brand.name}" from ${branch.name}.` };
+  }
+
+  /**
+   * Restore a brand that was per-branch archived back into ONE branch. Clears
+   * the BranchBrandArchive row; the brand and its products reappear in that
+   * branch — except any product that is itself still archived (globally or in
+   * that branch), which keeps its own archived state.
+   */
+  async restoreToBranch(brandId: string, branchId: string, actorId: string) {
+    const existing = await this.prisma.branchBrandArchive.findUnique({
+      where: { brandId_branchId: { brandId, branchId } },
+      include: {
+        brand: { select: { id: true, name: true, deletedAt: true } },
+        branch: { select: { id: true, name: true, deletedAt: true } },
+      },
+    });
+    if (!existing) {
+      throw new NotFoundException('No branch-archived brand found for that branch.');
+    }
+    if (existing.branch.deletedAt) {
+      throw new BadRequestException('That branch is archived. Restore the branch first.');
+    }
+    if (existing.brand.deletedAt) {
+      throw new BadRequestException('That brand is archived everywhere. Restore the brand first.');
+    }
+
+    await this.prisma.branchBrandArchive.delete({
+      where: { brandId_branchId: { brandId, branchId } },
+    });
+
+    await this.audit(actorId, 'BRAND_BRANCH_RESTORED', brandId, null, {
+      name: existing.brand.name,
+      branchId,
+      branchName: existing.branch.name,
+    });
+
+    return { message: `Restored "${existing.brand.name}" to ${existing.branch.name}.` };
   }
 
   async restore(id: string, restoredBy: string) {

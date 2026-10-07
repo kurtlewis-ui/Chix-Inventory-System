@@ -93,4 +93,31 @@ export class BrandsController {
     const data = await this.brandsService.remove(id, user.userId);
     return { success: true, data };
   }
+
+  // Per-branch brand archive: remove a brand from ONE branch only (Owner +
+  // Admin). The brand + its products become hidden/unsellable in that branch;
+  // all other branches are unaffected.
+  @Delete(':id/branch/:branchId')
+  @Roles('Owner', 'Admin')
+  @ApiOperation({ summary: 'Remove a brand from a single branch (per-branch archive)' })
+  async removeFromBranch(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('branchId', ParseUUIDPipe) branchId: string,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const data = await this.brandsService.removeFromBranch(id, branchId, user.userId);
+    return { success: true, data };
+  }
+
+  @Post(':id/branch/:branchId/restore')
+  @Roles('Owner', 'Admin')
+  @ApiOperation({ summary: 'Restore a brand into a single branch (per-branch archive)' })
+  async restoreToBranch(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('branchId', ParseUUIDPipe) branchId: string,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const data = await this.brandsService.restoreToBranch(id, branchId, user.userId);
+    return { success: true, data };
+  }
 }

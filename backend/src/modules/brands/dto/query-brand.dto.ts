@@ -31,4 +31,12 @@ export class QueryBrandDto {
   @IsOptional()
   @IsUUID()
   branchId?: string;
+
+  // With a branchId, brands archived in that branch are hidden by default.
+  // Set 'true' to list ONLY the brands archived in that branch (used by the
+  // Branch Brand Archive page).
+  @ApiProperty({ required: false, description: 'List only brands archived in the given branch' })
+  @IsOptional()
+  @IsString()
+  branchArchived?: string;
 }
