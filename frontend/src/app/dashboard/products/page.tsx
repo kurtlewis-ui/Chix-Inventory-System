@@ -695,10 +695,10 @@ export default function ProductsPage() {
         <Modal title={`Remove from ${selectedBranchName}`} onClose={() => { setRemoveBranchProduct(null); setFormError(null); }}>
           <div className="space-y-4">
             <p className="text-sm text-text-primary">
-              Remove <strong>{removeBranchProduct.name}</strong> from <strong>{selectedBranchName}</strong> only?
+              Are you sure you want to remove <strong>{removeBranchProduct.name}</strong> from <strong>{selectedBranchName}</strong>?
             </p>
             <p className="text-sm text-text-secondary">
-              It will be hidden and can no longer be sold at this shop. It stays available in all other shops. Its stock here is kept, so you can restore it later from <strong>Branch Product Archive</strong>.
+              Archiving this product in this branch only. It stays available in other shops and can be restored from <strong>Branch Product Archive</strong>.
             </p>
             {formError && <p className="text-sm text-accent-red">{formError}</p>}
             <div className="flex justify-end gap-2">

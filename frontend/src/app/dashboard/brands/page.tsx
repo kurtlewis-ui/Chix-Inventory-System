@@ -420,10 +420,10 @@ export default function BrandsPage() {
         <Modal title={`Remove from ${selectedBranchName}`} onClose={() => { setRemoveBranchBrand(null); setFormError(null); }}>
           <div className="space-y-4">
             <p className="text-sm text-text-primary">
-              Remove <strong>{removeBranchBrand.name}</strong> from <strong>{selectedBranchName}</strong> only?
+              Are you sure you want to remove <strong>{removeBranchBrand.name}</strong> from <strong>{selectedBranchName}</strong>?
             </p>
             <p className="text-sm text-text-secondary">
-              This brand and all its products will be hidden and can no longer be sold at this shop. It stays available in all other shops. You can restore it later from <strong>Branch Brand Archive</strong>.
+              Archiving this brand in this branch only. It stays available in other shops and can be restored from <strong>Branch Brand Archive</strong>.
             </p>
             {formError && <p className="text-sm text-accent-red">{formError}</p>}
             <div className="flex justify-end gap-2">
