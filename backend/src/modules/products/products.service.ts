@@ -418,22 +418,25 @@ export class ProductsService {
       throw new NotFoundException('Branch not found');
     }
 
-    // The product must have an inventory row for this branch to be archived
-    // there. (Every product the branch can see has one.) Create-if-missing is
-    // deliberately avoided: if there's no row, there's nothing to remove here.
+    // A product can be removed from a branch even if it has no stock record
+    // there yet. If an inventory row exists we archive it (keeping its
+    // quantity so restore brings it back exactly); if none exists we create a
+    // 0-quantity row that is already archived. Restoring later clears
+    // archivedAt and the product reappears in the branch at 0 stock, ready to
+    // be restocked.
     const inv = await this.prisma.inventory.findUnique({
       where: { productId_branchId: { productId, branchId } },
     });
-    if (!inv) {
-      throw new BadRequestException('This product has no stock record at that branch.');
-    }
-    if (inv.archivedAt) {
+    if (inv?.archivedAt) {
       throw new BadRequestException('This product is already removed from that branch.');
     }
 
-    await this.prisma.inventory.update({
+    await this.prisma.inventory.upsert({
       where: { productId_branchId: { productId, branchId } },
-      data: { archivedAt: new Date() },
+      // No existing row: create it already-archived with 0 stock (no price).
+      create: { productId, branchId, quantity: 0, archivedAt: new Date() },
+      // Existing, not-yet-archived row: just mark it archived.
+      update: { archivedAt: new Date() },
     });
 
     await this.audit(actorId, 'PRODUCT_BRANCH_ARCHIVED', productId, null, {

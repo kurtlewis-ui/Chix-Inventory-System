@@ -44,7 +44,7 @@ describe('ProductsService — core & per-branch archive', () => {
       product: { findFirst: jest.fn(), findUnique: jest.fn(), findMany: jest.fn(), count: jest.fn(), create: jest.fn(), update: jest.fn(), aggregate: jest.fn() },
       brand: { findFirst: jest.fn() },
       branch: { findFirst: jest.fn(), count: jest.fn() },
-      inventory: { findUnique: jest.fn(), update: jest.fn() },
+      inventory: { findUnique: jest.fn(), update: jest.fn(), upsert: jest.fn() },
       stockMovement: { create: jest.fn() },
       auditLog: { create: jest.fn() },
       $transaction: jest.fn(),
@@ -150,11 +150,23 @@ describe('ProductsService — core & per-branch archive', () => {
       await expect(service.removeFromBranch(PRODUCT_ID, BRANCH_ID, USER)).rejects.toThrow(NotFoundException);
     });
 
-    it('rejects when the product has no stock record at that branch', async () => {
+    it('archives even when the product has no stock record at that branch (creates a 0-qty archived row)', async () => {
       prisma.product.findFirst.mockResolvedValue({ id: PRODUCT_ID, name: 'Blue Razz' });
       prisma.branch.findFirst.mockResolvedValue({ id: BRANCH_ID, name: 'Shop A' });
+      // No inventory row exists for this product at this branch.
       prisma.inventory.findUnique.mockResolvedValue(null);
-      await expect(service.removeFromBranch(PRODUCT_ID, BRANCH_ID, USER)).rejects.toThrow(/no stock record/i);
+      prisma.inventory.upsert.mockResolvedValue({});
+
+      // Should NOT throw — it should create an archived, 0-quantity row.
+      await expect(service.removeFromBranch(PRODUCT_ID, BRANCH_ID, USER)).resolves.toEqual(
+        expect.objectContaining({ message: expect.stringMatching(/Removed/i) }),
+      );
+
+      const call = prisma.inventory.upsert.mock.calls[0][0];
+      expect(call.create).toEqual(
+        expect.objectContaining({ productId: PRODUCT_ID, branchId: BRANCH_ID, quantity: 0 }),
+      );
+      expect(call.create.archivedAt).toBeInstanceOf(Date);
     });
 
     it('rejects when already removed from that branch', async () => {
@@ -164,18 +176,18 @@ describe('ProductsService — core & per-branch archive', () => {
       await expect(service.removeFromBranch(PRODUCT_ID, BRANCH_ID, USER)).rejects.toThrow(/already removed/i);
     });
 
-    it('sets archivedAt on the branch inventory row (keeping quantity)', async () => {
+    it('archives an existing (unarchived) branch inventory row without touching quantity', async () => {
       prisma.product.findFirst.mockResolvedValue({ id: PRODUCT_ID, name: 'Blue Razz' });
       prisma.branch.findFirst.mockResolvedValue({ id: BRANCH_ID, name: 'Shop A' });
       prisma.inventory.findUnique.mockResolvedValue({ archivedAt: null, quantity: 10 });
-      prisma.inventory.update.mockResolvedValue({});
+      prisma.inventory.upsert.mockResolvedValue({});
 
       await service.removeFromBranch(PRODUCT_ID, BRANCH_ID, USER);
 
-      const data = prisma.inventory.update.mock.calls[0][0].data;
-      expect(data.archivedAt).toBeInstanceOf(Date);
-      // quantity is NOT touched (kept for restore).
-      expect(data.quantity).toBeUndefined();
+      const call = prisma.inventory.upsert.mock.calls[0][0];
+      // Existing row path: update only sets archivedAt, never quantity.
+      expect(call.update.archivedAt).toBeInstanceOf(Date);
+      expect(call.update.quantity).toBeUndefined();
     });
   });
 
