@@ -137,10 +137,10 @@ export default function StaffDailyReportPage() {
     }
   };
 
-  // Use the PH BUSINESS date (2 AM–2 AM), not the device-local calendar date,
-  // so the window matches how the backend files sales. Using the device date
-  // is what made the report come back empty right after saving (e.g. just
-  // after midnight, or on a device in a different timezone).
+  // Use the PH BUSINESS date (midnight-to-midnight PH), not the device-local
+  // calendar date, so the window matches how the backend files sales. Using the
+  // device date is what made the report come back empty right after saving
+  // (e.g. on a device in a different timezone).
   const today = useMemo(() => phBusinessToday(), []);
 
   // Load the full day (no server search): search is applied CLIENT-SIDE below

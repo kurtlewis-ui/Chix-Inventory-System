@@ -130,9 +130,9 @@ export class SalesService {
     }
 
     if (startDate || endDate) {
-      // Filter by PH BUSINESS day (2 AM–2 AM), matching how sales are numbered,
-      // so a sale made after midnight still counts under the same business day
-      // and shows on the day's report. Window is [start 2AM PH, next-day 2AM PH).
+      // Filter by PH BUSINESS day (midnight-to-midnight PH), matching how sales
+      // are numbered, so the day's report shows that calendar day's sales.
+      // Window is [start 12AM PH, next-day 12AM PH).
       where.createdAt = businessDayRange(startDate, endDate);
     }
 
@@ -677,9 +677,9 @@ export class SalesService {
    * back at 1 every day instead of sharing one global, ever-climbing count.
    */
   private async nextDailyNumber(tx: Prisma.TransactionClient, branchId: string): Promise<number> {
-    // Reset per branch on the shop's Philippine BUSINESS day (2 AM -> 2 AM),
-    // not calendar midnight. A sale at 1:30 AM PH still belongs to the
-    // previous business day, so it keeps counting up from that day's numbers.
+    // Reset per branch on the shop's Philippine BUSINESS day (midnight ->
+    // midnight PH = the ordinary PH calendar date). A sale at 1:30 AM PH
+    // belongs to that same day, so numbering counts up from that day's numbers.
     const today = businessDateOnly();
     const counter = await tx.dailySaleCounter.upsert({
       where: { branchId_date: { branchId, date: today } },
