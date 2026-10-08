@@ -11,11 +11,11 @@ function peso(n: number) {
   return `\u20B1${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-// The shop operates on a Philippine business day (UTC+8, starts 2 AM). These
-// helpers mirror OwnerProfitSection so the Admin quick-pick ranges line up with
-// the rest of the app.
+// The shop operates on a Philippine business day (UTC+8, starts 12 AM /
+// midnight). These helpers mirror OwnerProfitSection so the Admin quick-pick
+// ranges line up with the rest of the app.
 const PH_OFFSET_MS = 8 * 60 * 60 * 1000;
-const BUSINESS_START_HOUR = 2;
+const BUSINESS_START_HOUR = 0;
 
 function phBusinessNow(): Date {
   return new Date(Date.now() + PH_OFFSET_MS - BUSINESS_START_HOUR * 60 * 60 * 1000);

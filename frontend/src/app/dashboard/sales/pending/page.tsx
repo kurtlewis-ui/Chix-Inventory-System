@@ -233,12 +233,12 @@ export default function SalesPendingPage() {
   // Today's approved Total Sales / Total Expenses / Net for the selected branch.
   const { data: branchSummary } = useBranchSummary(selectedShop || undefined);
 
-  // The "Today (Approved)" strip is a PH business-day figure (2 AM–2 AM,
-  // computed server-side). If the page is left open across 2 AM PH it would
-  // keep showing yesterday's totals until a manual refresh. Schedule a one-shot
-  // refetch AT the next 2 AM PH boundary so it resets to the new day on its
-  // own, then re-arm for the following day. (The query also polls, but this
-  // guarantees a clean reset exactly at the boundary.)
+  // The "Today (Approved)" strip is a PH business-day figure (midnight-to-
+  // midnight, computed server-side). If the page is left open across 12 AM PH
+  // it would keep showing yesterday's totals until a manual refresh. Schedule a
+  // one-shot refetch AT the next 12 AM PH boundary so it resets to the new day
+  // on its own, then re-arm for the following day. (The query also polls, but
+  // this guarantees a clean reset exactly at the boundary.)
   const queryClient = useQueryClient();
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;

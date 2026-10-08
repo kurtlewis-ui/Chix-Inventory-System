@@ -1,10 +1,10 @@
 /**
  * Business-day date helpers for the shop's Philippine operating calendar.
  *
- * The shop's business day does NOT run midnight-to-midnight. It runs from
- * 2:00 AM to 2:00 AM Philippine time (UTC+8, no daylight saving). So a sale
- * made at, e.g., Tuesday 1:30 AM PH still belongs to MONDAY's business day,
- * and only flips to Tuesday once the clock passes 2:00 AM.
+ * The shop's business day runs midnight-to-midnight Philippine time
+ * (12:00 AM to 12:00 AM, UTC+8, no daylight saving). So each business day
+ * matches the ordinary PH calendar date: a sale made at, e.g., Tuesday
+ * 1:30 AM PH belongs to TUESDAY.
  *
  * All functions work regardless of the server's own timezone by doing the
  * math in a "PH-shifted" clock and converting back to real UTC instants.
@@ -13,14 +13,15 @@
 // Philippine Standard Time is a fixed UTC+8 (no DST).
 export const PH_OFFSET_MS = 8 * 60 * 60 * 1000;
 
-// The business day starts at 2:00 AM PH time.
-export const BUSINESS_DAY_START_HOUR = 2;
+// The business day starts at 12:00 AM (midnight) PH time.
+export const BUSINESS_DAY_START_HOUR = 0;
 const BUSINESS_DAY_START_MS = BUSINESS_DAY_START_HOUR * 60 * 60 * 1000;
 
 /**
  * Returns the current moment expressed on a "PH business clock": real PH time
- * shifted back by 2 hours. On this clock, the calendar date is exactly the
- * business day the moment belongs to, and midnight on this clock is 2 AM PH.
+ * shifted back by BUSINESS_DAY_START_HOUR hours (now 0, so it equals real PH
+ * time). On this clock, the calendar date is exactly the business day the
+ * moment belongs to, and midnight on this clock is 12 AM PH.
  * Returned as a Date whose UTC getters read the shifted PH wall-clock.
  */
 function phBusinessClock(at: Date = new Date()): Date {
@@ -52,8 +53,8 @@ export function startOfBusinessDay(at: Date = new Date()): Date {
 /**
  * The business-day calendar DATE (a @db.Date-friendly midnight-UTC Date) that
  * `at` belongs to. Used for the per-branch daily sale-number counter so the
- * counter resets at 2 AM PH, not midnight. Example: a sale at Tue 1:30 AM PH
- * returns Monday's date.
+ * counter resets at 12 AM (midnight) PH. Example: a sale at Tue 1:30 AM PH
+ * returns Tuesday's date.
  */
 export function businessDateOnly(at: Date = new Date()): Date {
   const clock = phBusinessClock(at);
@@ -65,7 +66,7 @@ export function businessDateOnly(at: Date = new Date()): Date {
 
 /**
  * Start of the current business WEEK as a real UTC instant. Weeks start on
- * MONDAY at 2:00 AM PH.
+ * MONDAY at 12:00 AM (midnight) PH.
  */
 export function startOfBusinessWeek(at: Date = new Date()): Date {
   const clock = phBusinessClock(at);
@@ -82,7 +83,7 @@ export function startOfBusinessWeek(at: Date = new Date()): Date {
 
 /**
  * Start of the current business MONTH as a real UTC instant. Months start on
- * the 1st at 2:00 AM PH.
+ * the 1st at 12:00 AM (midnight) PH.
  */
 export function startOfBusinessMonth(at: Date = new Date()): Date {
   const clock = phBusinessClock(at);
@@ -92,8 +93,9 @@ export function startOfBusinessMonth(at: Date = new Date()): Date {
 
 /**
  * The Postgres expression that maps a stored UTC timestamp column to its PH
- * business-day clock, so date_trunc() buckets align to the 2 AM PH boundary
- * with Monday-based weeks. Shift by +8h (to PH) then -2h (business start).
+ * business-day clock, so date_trunc() buckets align to the 12 AM PH boundary
+ * with Monday-based weeks. Shift by +8h (to PH) then -BUSINESS_DAY_START_HOUR
+ * (business start, now 0).
  *
  * `col` must be a trusted, hard-coded column name (never user input).
  */
@@ -107,7 +109,7 @@ export function phBusinessClockSql(col: string): string {
  * (as sent by the client from its local PH calendar). Parsed numerically so
  * the result is identical no matter what timezone the server runs in.
  *
- * Example: "2026-09-14" -> 2026-09-13T18:00:00.000Z (= 2 AM PH on Sep 14).
+ * Example: "2026-09-14" -> 2026-09-13T16:00:00.000Z (= 12 AM PH on Sep 14).
  * Returns null if the string isn't a valid YYYY-MM-DD.
  */
 export function businessDayStartFromDateStr(dateStr: string): Date | null {

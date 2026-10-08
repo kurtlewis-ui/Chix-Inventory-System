@@ -6,6 +6,8 @@ import {
   startOfBusinessDay,
   phBusinessClockSql,
   businessDayRange,
+  PH_OFFSET_MS,
+  BUSINESS_DAY_START_HOUR,
 } from '../../common/utils/business-day.util';
 
 @Injectable()
@@ -87,13 +89,16 @@ export class StatsService {
     const sinceClause = sinceDays !== null ? ` AND created_at >= now() - interval '${sinceDays} days'` : '';
 
     // Bucket on the Philippine BUSINESS clock (created_at shifted +8h to PH,
-    // then -2h so the day/week/month boundary lands at 2 AM PH). Postgres
-    // date_trunc('week', ...) already starts weeks on Monday, matching the
-    // "week starts Monday 2 AM" rule. We truncate on the shifted clock, then
-    // shift back to a real UTC instant for the returned bucket label.
+    // then -<startHour>h so the day/week/month boundary lands at the business
+    // day start — 12 AM PH). Postgres date_trunc('week', ...) already starts
+    // weeks on Monday, matching the "week starts Monday" rule. We truncate on
+    // the shifted clock, then shift back to a real UTC instant for the returned
+    // bucket label. Both shift amounts derive from the shared business-day
+    // constants so the boundary stays consistent if it ever changes.
+    const phOffsetHours = PH_OFFSET_MS / 3600000;
     const clock = phBusinessClockSql('created_at');
     const sql =
-      `SELECT (date_trunc('${unit}', ${clock}) - interval '8 hours' + interval '2 hours') AS bucket, ` +
+      `SELECT (date_trunc('${unit}', ${clock}) - interval '${phOffsetHours} hours' + interval '${BUSINESS_DAY_START_HOUR} hours') AS bucket, ` +
       `COALESCE(SUM(total), 0) AS total, COUNT(*) AS count ` +
       `FROM sales WHERE status = 'APPROVED'${sinceClause}${branchClause} ` +
       `GROUP BY 1 ORDER BY 1 ASC`;
@@ -150,8 +155,9 @@ export class StatsService {
     // salesOverview). Build the bucket expression per table so each references
     // the correctly-qualified created_at column (the revenue CTE joins sales,
     // so it must qualify with the `s.` alias).
+    const phOffsetHours = PH_OFFSET_MS / 3600000;
     const bucketFor = (col: string) =>
-      `(date_trunc('${unit}', ${phBusinessClockSql(col)}) - interval '8 hours' + interval '2 hours')`;
+      `(date_trunc('${unit}', ${phBusinessClockSql(col)}) - interval '${phOffsetHours} hours' + interval '${BUSINESS_DAY_START_HOUR} hours')`;
     // Per-table since/branch filters, with the column qualified as needed.
     const sinceFor = (col: string) =>
       sinceDays !== null ? ` AND ${col} >= now() - interval '${sinceDays} days'` : '';
@@ -240,9 +246,9 @@ export class StatsService {
   async branchSummary(branchId: string | undefined, actor: RequestUser) {
     const resolvedBranchId = await this.resolveBranchForActor(actor, branchId);
 
-    // "Today" follows the shop's Philippine business day: 2:00 AM PH -> 2:00 AM
-    // PH the next day. So a sale at, e.g., 1:30 AM still counts toward the
-    // previous day until the clock passes 2 AM.
+    // "Today" follows the shop's Philippine business day: 12:00 AM PH ->
+    // 12:00 AM PH the next day (ordinary PH calendar date). A sale at, e.g.,
+    // 1:30 AM PH counts toward that same calendar day.
     const start = startOfBusinessDay();
 
     const [salesAgg, expensesAgg, disposalsAgg, discountAgg, paymentItems, disposalRows] = await Promise.all([

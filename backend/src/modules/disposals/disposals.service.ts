@@ -299,8 +299,8 @@ export class DisposalsService {
     }
 
     if (startDate || endDate) {
-      // PH business-day window (2 AM–2 AM) so disposals show on the correct
-      // day's report regardless of server timezone. See business-day.util.
+      // PH business-day window (midnight-to-midnight PH) so disposals show on
+      // the correct day's report regardless of server timezone. See business-day.util.
       where.createdAt = businessDayRange(startDate, endDate);
     }
 
