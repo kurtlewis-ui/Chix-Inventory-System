@@ -803,7 +803,7 @@ export default function StaffDailyReportPage() {
           </div>
           <div className="flex items-center justify-between py-2 sm:block sm:py-0">
             <p className="text-xs text-text-secondary sm:mb-1">Total Expenses</p>
-            <p className="text-lg font-bold tabular-nums break-words" style={{ color: '#ef4444' }}>{peso(allExpenses.reduce((sum, e) => sum + e.amount, 0))}</p>
+            <p className="text-lg font-bold tabular-nums break-words" style={{ color: '#ef4444' }}>{peso(todaysExpenses.reduce((sum, e) => sum + e.amount, 0))}</p>
           </div>
           <div className="flex items-center justify-between py-2 sm:block sm:py-0">
             <p className="text-xs text-text-secondary sm:mb-1">Total Discount</p>
@@ -811,7 +811,7 @@ export default function StaffDailyReportPage() {
           </div>
           <div className="flex items-center justify-between py-2 sm:block sm:py-0">
             <p className="text-xs text-text-secondary sm:mb-1">Net</p>
-            <p className="text-lg font-bold tabular-nums break-words" style={{ color: (allSales.reduce((sum, s) => sum + s.total, 0) - allExpenses.reduce((sum, e) => sum + e.amount, 0)) >= 0 ? '#3b82f6' : '#ef4444' }}>{peso(allSales.reduce((sum, s) => sum + s.total, 0) - allExpenses.reduce((sum, e) => sum + e.amount, 0))}</p>
+            <p className="text-lg font-bold tabular-nums break-words" style={{ color: (allSales.reduce((sum, s) => sum + s.total, 0) - todaysExpenses.reduce((sum, e) => sum + e.amount, 0)) >= 0 ? '#3b82f6' : '#ef4444' }}>{peso(allSales.reduce((sum, s) => sum + s.total, 0) - todaysExpenses.reduce((sum, e) => sum + e.amount, 0))}</p>
           </div>
         </div>
       </div>
