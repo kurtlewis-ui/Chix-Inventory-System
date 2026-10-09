@@ -238,72 +238,76 @@ export class StatsService {
   }
 
   /**
-   * Today's approved Total Sales / Total Expenses / Net for one branch.
-   * Based on `decidedAt` (when each was actually approved), not `createdAt`,
-   * and only counts APPROVED records — pending items could still be
-   * declined, so they'd make this a moving, unreliable number.
+   * Branch summary strip (Total Sales / Expenses / Discount / Net), computed
+   * differently per role because the two audiences care about different things:
+   *
+   *   - STAFF: PENDING-based. Shows the running totals of everything the staff's
+   *     branch has submitted but that has NOT yet been decided. A record stays
+   *     counted until it is APPROVED or DECLINED — it does NOT reset at midnight.
+   *     When every pending record is cleared, the strip reads ₱0. This mirrors
+   *     the staff Daily Report, which lists PENDING records by status, not day.
+   *
+   *   - OWNER / ADMIN: APPROVED-TODAY. Shows what was actually approved during
+   *     the current PH business day (12 AM–12 AM), based on `decidedAt`. This is
+   *     the shop's realised sales/kita for today and resets at midnight.
    */
   async branchSummary(branchId: string | undefined, actor: RequestUser) {
     const resolvedBranchId = await this.resolveBranchForActor(actor, branchId);
 
-    // "Today" follows the shop's Philippine business day: 12:00 AM PH ->
-    // 12:00 AM PH the next day (ordinary PH calendar date). A sale at, e.g.,
-    // 1:30 AM PH counts toward that same calendar day.
+    // Role decides the filter: staff see their pending submissions; owner/admin
+    // see what has been approved so far today.
+    const isStaff = actor.role === 'Staff';
     const start = startOfBusinessDay();
+
+    // Status + (for owner/admin) decided-today filter, reused across every
+    // query below so sales, expenses, disposals and the discount/payment
+    // breakdowns all use the exact same scope.
+    const saleWhere = isStaff
+      ? { branchId: resolvedBranchId, status: SaleStatus.PENDING }
+      : { branchId: resolvedBranchId, status: SaleStatus.APPROVED, decidedAt: { gte: start } };
+    const expenseWhere = isStaff
+      ? { branchId: resolvedBranchId, status: ExpenseStatus.PENDING }
+      : { branchId: resolvedBranchId, status: ExpenseStatus.APPROVED, decidedAt: { gte: start } };
+    const disposalWhere = isStaff
+      ? { branchId: resolvedBranchId, status: DisposalStatus.PENDING }
+      : { branchId: resolvedBranchId, status: DisposalStatus.APPROVED, decidedAt: { gte: start } };
 
     const [salesAgg, expensesAgg, disposalsAgg, discountAgg, paymentItems, disposalRows] = await Promise.all([
       this.prisma.sale.aggregate({
-        where: { branchId: resolvedBranchId, status: SaleStatus.APPROVED, decidedAt: { gte: start } },
+        where: saleWhere,
         _sum: { total: true },
       }),
       this.prisma.expense.aggregate({
-        where: {
-          branchId: resolvedBranchId,
-          status: ExpenseStatus.APPROVED,
-          decidedAt: { gte: start },
-        },
+        where: expenseWhere,
         _sum: { amount: true },
       }),
-      // Approved disposals today = inventory value written off (a loss), so it
-      // reduces Net alongside expenses.
+      // Disposals = inventory value written off (a loss), so it reduces Net
+      // alongside expenses. (Pending for staff; approved-today for owner/admin.)
       this.prisma.disposal.aggregate({
-        where: {
-          branchId: resolvedBranchId,
-          status: DisposalStatus.APPROVED,
-          decidedAt: { gte: start },
-        },
+        where: disposalWhere,
         _sum: { value: true },
       }),
-      // Total Discount given on today's approved sales (DISPLAY only). Summed
-      // from the sale items whose parent sale is approved & decided today.
-      // totalSales already uses Sale.total (= Σ subTotal, net of discount), so
-      // the discount is NOT subtracted again — this is purely informational.
+      // Total Discount (DISPLAY only). Summed from the sale items whose parent
+      // sale is in scope. totalSales already uses Sale.total (= Σ subTotal, net
+      // of discount), so the discount is NOT subtracted again — informational.
       this.prisma.saleItem.aggregate({
-        where: {
-          sale: { branchId: resolvedBranchId, status: SaleStatus.APPROVED, decidedAt: { gte: start } },
-        },
+        where: { sale: saleWhere },
         _sum: { discount: true },
       }),
-      // Per-payment-method breakdown of today's approved sales. Pulled at the
-      // item level (payment varies per item) and split across buckets exactly
-      // like the /sales list summary: a Split item contributes its split
-      // amounts, everything else contributes its subTotal to its own bucket.
+      // Per-payment-method breakdown of the in-scope sales. Pulled at the item
+      // level (payment varies per item) and split across buckets exactly like
+      // the /sales list summary: a Split item contributes its split amounts,
+      // everything else contributes its subTotal to its own bucket.
       this.prisma.saleItem.findMany({
-        where: {
-          sale: { branchId: resolvedBranchId, status: SaleStatus.APPROVED, decidedAt: { gte: start } },
-        },
+        where: { sale: saleWhere },
         select: { paymentMethod: true, subTotal: true, paymentSplit: true },
       }),
-      // Today's approved disposal rows (productId + qty) so we can also value
-      // them at the product's SELLING price — the Admin's Today strip shows
-      // disposals at selling price, while Disposal.value stays cost-based for
-      // the Owner's P&L. Uses the product's CURRENT selling price.
+      // In-scope disposal rows (productId + qty) so we can also value them at
+      // the product's SELLING price — the Admin's strip shows disposals at
+      // selling price, while Disposal.value stays cost-based for the Owner's
+      // P&L. Uses the product's CURRENT selling price.
       this.prisma.disposal.findMany({
-        where: {
-          branchId: resolvedBranchId,
-          status: DisposalStatus.APPROVED,
-          decidedAt: { gte: start },
-        },
+        where: disposalWhere,
         select: { productId: true, quantity: true },
       }),
     ]);

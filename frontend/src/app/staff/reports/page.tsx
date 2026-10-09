@@ -3,7 +3,6 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Search, ShoppingCart, Pencil, Trash2, Check } from 'lucide-react';
 import {
-  useSalesRecords,
   useSalesPending,
   useDisposals,
   useExpenses,
@@ -137,42 +136,35 @@ export default function StaffDailyReportPage() {
     }
   };
 
-  // Use the PH BUSINESS date (midnight-to-midnight PH), not the device-local
-  // calendar date, so the window matches how the backend files sales. Using the
-  // device date is what made the report come back empty right after saving
-  // (e.g. on a device in a different timezone).
+  // Current PH BUSINESS date — shown only as a header label for context now
+  // that the report lists pending items by status rather than by day.
   const today = useMemo(() => phBusinessToday(), []);
 
-  // Load the full day (no server search): search is applied CLIENT-SIDE below
-  // so it filters to matching ITEM rows, and so the daily summary totals stay
-  // based on ALL of today's sales regardless of the search text.
-  const { data, isLoading, isError, error } = useSalesRecords({
-    startDate: today,
-    endDate: today,
-  });
-  const approvedSales = data?.data ?? [];
-
-  const { data: pendingData } = useSalesPending({
-    startDate: today,
-    endDate: today,
-  });
+  // The staff Daily Report is STATUS-based, not date-based: it shows the
+  // staff's PENDING sales regardless of when they were created, so a sale
+  // submitted before midnight does NOT disappear at 12 AM. A sale leaves this
+  // view only when it is APPROVED or DECLINED. (No startDate/endDate filter —
+  // the /sales/pending endpoint is already scoped to this staff's own branch.)
+  // Search is applied CLIENT-SIDE below so it filters to matching ITEM rows
+  // while the summary totals stay based on ALL pending sales.
+  const { data: pendingData, isLoading, isError, error } = useSalesPending({});
   const pendingSales = pendingData?.data ?? [];
 
-  // Today's full picture: pending + approved, sorted oldest first.
-  // Tables show PENDING only; summary totals count pending + approved.
+  // All pending sales, oldest first. Both the tables and the summary totals
+  // are pending-only now (approved sales drop off the staff view entirely).
   const allSales = useMemo(
     () =>
-      [...pendingSales, ...approvedSales].sort(
+      [...pendingSales].sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       ),
-    [pendingSales, approvedSales],
+    [pendingSales],
   );
 
-  // "View by Sale" table shows PENDING sales, with the product search applied
-  // CLIENT-SIDE so it filters to the matching item rows (and recomputes each
-  // sale's visible total). The daily summary below still uses allSales (full).
+  // "View by Sale" table shows the pending sales, with the product search
+  // applied CLIENT-SIDE so it filters to the matching item rows (and recomputes
+  // each sale's visible total). The summary below still uses allSales (full).
   const sales = useMemo(
-    () => filterSalesByProduct(allSales.filter((s) => s.status === 'PENDING'), search),
+    () => filterSalesByProduct(allSales, search),
     [allSales, search],
   );
 
@@ -184,11 +176,13 @@ export default function StaffDailyReportPage() {
   const { data: disposalsData } = useDisposals({ status: 'PENDING' });
   const pendingDisposals = (disposalsData?.data ?? []).filter((d) => d.status === 'PENDING');
 
-  const { data: expensesData } = useExpenses({ startDate: today, endDate: today });
-  const allExpenses = (expensesData?.data ?? []).filter((e) => e.status !== 'DECLINED');
-  const todaysExpenses = allExpenses.filter((e) => e.status === 'PENDING');
+  // Expenses are shown by STATUS, not date (same as pending sales/disposals):
+  // a submitted expense stays visible until an Owner/Admin approves or declines
+  // it, and does NOT disappear at midnight. No date filter.
+  const { data: expensesData } = useExpenses({ status: 'PENDING' });
+  const todaysExpenses = (expensesData?.data ?? []).filter((e) => e.status === 'PENDING');
 
-  // Aggregate items across today's sales (pending + approved) for "View by Product".
+  // Aggregate items across the pending sales for "View by Product".
   const productRows = useMemo(() => {
     const map = new Map<string, { name: string; brandName: string; quantity: number; total: number }>();
     for (const sale of allSales) {
@@ -216,9 +210,11 @@ export default function StaffDailyReportPage() {
         )}
         <h1 className="text-2xl font-bold text-text-primary">Daily Report</h1>
         <p className="mt-0.5 text-xs text-text-muted">
-          {/* Label the PH business day being shown (parse as local noon to
-              avoid an off-by-one from timezone shifts on a bare YYYY-MM-DD). */}
-          {new Date(`${today}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          {/* Current PH date for context (parsed as local noon to avoid an
+              off-by-one on a bare YYYY-MM-DD). The lists below show PENDING
+              items by status, so they stay until approved/declined — they do
+              NOT reset at midnight. */}
+          {new Date(`${today}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} · Pending items awaiting approval
         </p>
       </div>
 

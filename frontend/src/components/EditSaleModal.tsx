@@ -12,6 +12,12 @@ function peso(n: number) {
   return `\u20B1${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+// Human-friendly label for a payment method (only 'BankTransfer' needs a space;
+// 'Split'/'Mixed' are shown as-is).
+function methodLabel(pm: PaymentMethod): string {
+  return pm === 'BankTransfer' ? 'Bank Transfer' : pm;
+}
+
 // Local modal (moved here with the Edit Sale modal so both the Owner/Admin
 // Pending page and the Staff Daily Report render it identically). `size`
 // controls the max width — 'md' for a normal dialog, 'xl' widens it for the
@@ -64,14 +70,23 @@ interface EditRow {
   missingProduct?: boolean;
 }
 
+// Payment methods selectable when editing a line. Split/Mixed are rollup/
+// composite values that aren't picked directly here: changing a line's payment
+// sets one of these three simple methods (and drops any prior Split breakdown).
+const EDITABLE_PAYMENT_OPTIONS: { value: PaymentMethod; label: string }[] = [
+  { value: 'Cash', label: 'Cash' },
+  { value: 'Gcash', label: 'Gcash' },
+  { value: 'BankTransfer', label: 'Bank Transfer' },
+];
+
 /**
  * Shared modal for editing a PENDING sale — used by the Owner/Admin Pending
  * Sales page and the Staff Daily Report. It edits the customer name and the
- * sale's line items (product, quantity, discount); payment method is not
- * editable here. The parent supplies `onSave`, which is expected to call the
- * update-sale mutation (PATCH /sales/:id). The backend rejects edits of
- * non-pending sales and enforces ownership, so this modal is only mounted for
- * pending sales the actor is allowed to edit.
+ * sale's line items (product, quantity, discount, and per-item PAYMENT METHOD).
+ * The parent supplies `onSave`, which is expected to call the update-sale
+ * mutation (PATCH /sales/:id). The backend rejects edits of non-pending sales
+ * and enforces ownership, so this modal is only mounted for pending sales the
+ * actor is allowed to edit (Staff on their own, Owner on any; Admin cannot).
  */
 export function EditSaleModal({
   sale,
@@ -156,6 +171,17 @@ export function EditSaleModal({
     );
   };
   const removeRow = (idx: number) => { setDirty(true); setRows((rs) => rs.filter((_, i) => i !== idx)); };
+  // Change a line's payment method. Switching to a simple method (Cash/Gcash/
+  // BankTransfer) drops any previous Split breakdown — the whole line total is
+  // now paid via the chosen method. (Backend recomputes the sale's rollup.)
+  const changePayment = (idx: number, paymentMethod: PaymentMethod) => {
+    setDirty(true);
+    setRows((rs) =>
+      rs.map((r, i) =>
+        i === idx ? { ...r, paymentMethod, paymentSplit: null } : r,
+      ),
+    );
+  };
 
   const handleSubmit = async () => {
     if (rows.length === 0) { setErr('A sale must have at least one item.'); return; }
@@ -199,7 +225,7 @@ export function EditSaleModal({
             <span className="text-xs text-text-muted">{rows.length} item{rows.length === 1 ? '' : 's'}</span>
           </div>
           <p className="mb-3 text-xs text-text-muted">
-            Payment method isn&apos;t editable here — decline the sale and have the staff resubmit it to change how an item was paid.
+            You can change each item&apos;s payment method below. Switching an item that was paid via Split to a single method sets the whole line to that method.
           </p>
 
           {/* Column headers (desktop) so each field is labelled and aligned. */}
@@ -207,7 +233,7 @@ export function EditSaleModal({
             <span>Product</span>
             <span className="w-28 text-center">Qty</span>
             <span className="w-28 text-right">Line total</span>
-            <span className="w-20 text-center">Payment</span>
+            <span className="w-32 text-center">Payment</span>
             <span className="w-8" />
           </div>
 
@@ -250,7 +276,25 @@ export function EditSaleModal({
                   <div className="flex items-center justify-between gap-3 sm:contents">
                     <NumberStepper min={1} ariaLabel="Quantity" value={String(row.quantity)} onChange={(v) => setRow(idx, { quantity: parseInt(v) || 1 })} className="w-28 shrink-0 sm:justify-self-center" />
                     <span className="w-28 text-right text-sm font-semibold text-text-primary tabular-nums">{peso(priceOf(row) * row.quantity - (row.discount ?? 0))}</span>
-                    <span className="w-20 truncate text-center text-xs text-text-muted" title={row.paymentMethod}>{row.paymentMethod}</span>
+                    {(() => {
+                      // Payment dropdown. If the line's current method is a
+                      // composite (Split/Mixed) that isn't directly selectable,
+                      // show it as the current value so the field isn't blank;
+                      // picking any simple method replaces it.
+                      const isComposite = row.paymentMethod === 'Split' || row.paymentMethod === 'Mixed';
+                      const paymentOptions = isComposite
+                        ? [{ value: row.paymentMethod, label: methodLabel(row.paymentMethod) }, ...EDITABLE_PAYMENT_OPTIONS]
+                        : EDITABLE_PAYMENT_OPTIONS;
+                      return (
+                        <Select
+                          value={row.paymentMethod}
+                          onChange={(v) => changePayment(idx, v as PaymentMethod)}
+                          ariaLabel="Payment method"
+                          className="w-32 sm:justify-self-center"
+                          options={paymentOptions}
+                        />
+                      );
+                    })()}
                     <button onClick={() => removeRow(idx)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-accent-red transition hover:bg-accent-red/10 sm:justify-self-end" title="Remove item"><Trash2 size={15} /></button>
                   </div>
                 </div>
