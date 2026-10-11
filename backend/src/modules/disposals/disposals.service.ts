@@ -42,7 +42,9 @@ export class DisposalsService {
     const value = unitPrice.mul(dto.quantity);
 
     const disposal = await this.prisma.$transaction(async (tx) => {
-      await this.reserveStock(tx, branchId, product.id, product.name, dto.quantity);
+      const quantityAfter = await this.reserveStock(
+        tx, branchId, product.id, product.name, dto.quantity,
+      );
 
       const created = await tx.disposal.create({
         data: {
@@ -61,6 +63,21 @@ export class DisposalsService {
           addedAt: dto.addedAt ? new Date(dto.addedAt) : null,
         },
         include: this.includeFull(),
+      });
+
+      // Record the stock drop in the activity log AT REQUEST TIME, because the
+      // stock is actually deducted now (reserved) — not at approval. This is
+      // the real -qty movement; approval later adds a 0-change audit line.
+      await tx.stockMovement.create({
+        data: {
+          productId: product.id,
+          branchId,
+          userId: actor.userId,
+          type: 'DISPOSAL',
+          quantityChange: -dto.quantity,
+          quantityAfter,
+          description: 'Disposed Product (Pending)',
+        },
       });
 
       await tx.auditLog.create({
@@ -112,7 +129,10 @@ export class DisposalsService {
         include: this.includeFull(),
       });
 
-      // Log the stock movement for disposal
+      // Audit-only movement: the stock was ALREADY deducted when the disposal
+      // was requested (see create()), so approval must NOT deduct again. Record
+      // a 0-change line that stamps WHO approved and WHEN, keeping the activity
+      // log a complete, transparent trail without double-counting the stock.
       if (disposal.productId) {
         const inv = await tx.inventory.findUnique({
           where: { productId_branchId: { productId: disposal.productId, branchId: disposal.branchId } },
@@ -123,9 +143,9 @@ export class DisposalsService {
             branchId: disposal.branchId,
             userId: actor.userId,
             type: 'DISPOSAL',
-            quantityChange: -disposal.quantity,
+            quantityChange: 0,
             quantityAfter: inv?.quantity ?? 0,
-            description: 'Disposed product.',
+            description: 'Disposal approved',
           },
         });
       }
@@ -173,7 +193,7 @@ export class DisposalsService {
         // disposal was created), the stock is still returned by recreating
         // the row — instead of an updateMany silently matching nothing and
         // losing the stock.
-        await tx.inventory.upsert({
+        const restored = await tx.inventory.upsert({
           where: {
             productId_branchId: {
               productId: disposal.productId,
@@ -186,6 +206,21 @@ export class DisposalsService {
             quantity: disposal.quantity,
           },
           update: { quantity: { increment: disposal.quantity } },
+          select: { quantity: true },
+        });
+
+        // Log the stock return so the activity trail shows the decline, who
+        // did it, and when (mirrors the pending-dispose entry in create()).
+        await tx.stockMovement.create({
+          data: {
+            productId: disposal.productId,
+            branchId: disposal.branchId,
+            userId: actor.userId,
+            type: 'RETURN',
+            quantityChange: disposal.quantity,
+            quantityAfter: restored.quantity,
+            description: 'Disposal declined — stock returned',
+          },
         });
       }
 
@@ -230,7 +265,7 @@ export class DisposalsService {
       // Only a PENDING disposal still has its reservation in effect — a
       // DECLINED one was already restored when it was declined.
       if (disposal.status === DisposalStatus.PENDING && disposal.productId) {
-        await tx.inventory.upsert({
+        const restored = await tx.inventory.upsert({
           where: {
             productId_branchId: {
               productId: disposal.productId,
@@ -243,6 +278,21 @@ export class DisposalsService {
             quantity: disposal.quantity,
           },
           update: { quantity: { increment: disposal.quantity } },
+          select: { quantity: true },
+        });
+
+        // Log the stock return so deleting a pending disposal is also visible
+        // in the activity trail (who/when), consistent with decline().
+        await tx.stockMovement.create({
+          data: {
+            productId: disposal.productId,
+            branchId: disposal.branchId,
+            userId: actor.userId,
+            type: 'RETURN',
+            quantityChange: disposal.quantity,
+            quantityAfter: restored.quantity,
+            description: 'Pending disposal deleted — stock returned',
+          },
         });
       }
 
@@ -262,14 +312,18 @@ export class DisposalsService {
     return { message: 'Disposal deleted successfully' };
   }
 
-  /** Same atomic conditional-UPDATE reservation pattern as SalesService. */
+  /**
+   * Same atomic conditional-UPDATE reservation pattern as SalesService.
+   * Returns the branch's REMAINING quantity after the decrement, so the caller
+   * can record an accurate `quantityAfter` on the stock-movement log entry.
+   */
   private async reserveStock(
     tx: Prisma.TransactionClient,
     branchId: string,
     productId: string,
     productName: string,
     quantity: number,
-  ) {
+  ): Promise<number> {
     const result = await tx.inventory.updateMany({
       where: { productId, branchId, quantity: { gte: quantity } },
       data: { quantity: { decrement: quantity } },
@@ -282,6 +336,11 @@ export class DisposalsService {
         `Insufficient stock to dispose "${productName}" (need ${quantity}, have ${inv?.quantity ?? 0})`,
       );
     }
+    const inv = await tx.inventory.findUnique({
+      where: { productId_branchId: { productId, branchId } },
+      select: { quantity: true },
+    });
+    return inv?.quantity ?? 0;
   }
 
   async findAll(query: QueryDisposalDto, actor: RequestUser, status?: DisposalStatus) {

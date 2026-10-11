@@ -104,9 +104,16 @@ export function StockHistoryModal({ productId, productName, branchId, branchName
                     <span className="text-text-secondary">Remaining Quantity: </span>
                     <span className="font-medium text-text-primary">{m.quantityAfter}</span>
                     {' '}
-                    <span className={`font-medium ${m.quantityChange > 0 ? 'text-accent-green' : 'text-accent-red'}`}>
-                      ({m.quantityChange > 0 ? '+' : ''}{m.quantityChange})
-                    </span>
+                    {/* A 0-change row (e.g. an audit-only "Disposal approved"
+                        line, where the stock already moved earlier) shows a
+                        neutral "(no change)" instead of a red "(0)". */}
+                    {m.quantityChange === 0 ? (
+                      <span className="font-medium text-text-muted">(no change)</span>
+                    ) : (
+                      <span className={`font-medium ${m.quantityChange > 0 ? 'text-accent-green' : 'text-accent-red'}`}>
+                        ({m.quantityChange > 0 ? '+' : ''}{m.quantityChange})
+                      </span>
+                    )}
                   </p>
                   {canUndo && (
                     confirmId === m.id ? (
