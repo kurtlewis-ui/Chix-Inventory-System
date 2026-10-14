@@ -41,9 +41,19 @@ const ENTRIES_OPTIONS = [5, 10, 25, 50, 100, 'All'] as const;
 
 export default function ProductsPage() {
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [brandFilter, setBrandFilter] = useState('');
   const [entriesPerPage, setEntriesPerPage] = useState<number | 'All'>(10);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Debounce search by 300ms so typing fires one request after the user stops,
+  // instead of one request per keystroke. Only the product QUERY uses the
+  // debounced value; reorder-gating below still uses the immediate `search`
+  // so dragging disables the instant any character is typed.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const { data: branchData } = useBranches();
   const { data: brandData } = useBrands();
@@ -85,7 +95,7 @@ export default function ProductsPage() {
   // the client-side pagination/slicing below. Without this the query defaulted
   // to 20, so the "Show 50/100/All" control and paging past 20 showed nothing
   // beyond the first 20 rows.
-  const { data, isLoading, isError, error } = useProducts({ search, brandId: brandFilter || undefined, limit: 200 });
+  const { data, isLoading, isError, error } = useProducts({ search: debouncedSearch, brandId: brandFilter || undefined, limit: 200 });
   const allProducts = data?.data ?? [];
   // When a SINGLE shop is selected, hide products that were per-branch archived
   // ("removed") from that shop — matching what staff/selling see. On "All Shops"
