@@ -15,6 +15,11 @@ const cookieParser: (...args: any[]) => any =
   cookieParserImport.default ?? cookieParserImport;
 const helmetImport = require('helmet');
 const helmet: (...args: any[]) => any = helmetImport.default ?? helmetImport;
+// compression is also a CommonJS module — load it the same resilient way so it
+// works under both the Nest build and Vercel's bundler.
+const compressionImport = require('compression');
+const compression: (...args: any[]) => any =
+  compressionImport.default ?? compressionImport;
 /* eslint-enable @typescript-eslint/no-var-requires */
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -57,6 +62,12 @@ export async function createApp(): Promise<INestApplication> {
   const bodyLimit = process.env.BODY_LIMIT || '15mb';
   app.use(json({ limit: bodyLimit }));
   app.use(urlencoded({ extended: true, limit: bodyLimit }));
+
+  // Gzip-compress responses so JSON payloads travel 60-80% smaller — faster for
+  // branches on mobile data and less outbound bandwidth. The client's
+  // Accept-Encoding negotiates this transparently; clients that don't support
+  // gzip simply receive the response uncompressed.
+  app.use(compression());
 
   // Security headers
   app.use(helmet());
