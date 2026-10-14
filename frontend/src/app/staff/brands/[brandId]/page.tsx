@@ -31,6 +31,7 @@ export default function BrandProductsPage() {
   const params = useParams();
   const brandId = String(params.brandId);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selected, setSelected] = useState<StaffProduct | null>(null);
   const [cooldown, setCooldown] = useState(false);
   // Id of the product tile to briefly flash green after a successful add,
@@ -45,7 +46,15 @@ export default function BrandProductsPage() {
   const { data: brandData } = useBrands();
   const brand = (brandData?.data ?? []).find((b) => b.id === brandId);
 
-  const { data, isLoading, isError, error } = useProducts({ brandId, branchId, search });
+  // Debounce search by 300ms so typing fires one request after the user stops,
+  // instead of one request per keystroke (matches the pattern on the brands /
+  // staff landing pages).
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data, isLoading, isError, error } = useProducts({ brandId, branchId, search: debouncedSearch });
   const products = (data?.data ?? []) as StaffProduct[];
 
   // Draft items for auto-subtracting stock display

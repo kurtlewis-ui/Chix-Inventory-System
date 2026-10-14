@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useBrands, useProducts } from '@/lib/hooks';
 import { Select } from '@/components/Select';
@@ -20,11 +20,19 @@ const ALL_LIMIT = 200;
 export default function StaffProductsPage() {
   const [brandId, setBrandId] = useState('');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [page, setPage] = useState(1);
 
   const user = useAuthStore((s) => s.user);
   const branchId = user?.branch?.id;
+
+  // Debounce search by 300ms so typing fires one request after the user stops,
+  // instead of one request per keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const { data: brandData } = useBrands();
   const brands = brandData?.data ?? [];
@@ -35,7 +43,7 @@ export default function StaffProductsPage() {
   const { data, isLoading, isError, error } = useProducts({
     branchId,
     brandId: brandId || undefined,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     page: isAll ? 1 : page,
     limit: effectiveLimit,
   });
