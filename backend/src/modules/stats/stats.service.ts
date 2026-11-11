@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { SaleStatus, ExpenseStatus, DisposalStatus } from '@prisma/client';
+import { Prisma, SaleStatus, ExpenseStatus, DisposalStatus } from '@prisma/client';
+import { saleAggregatePredicate } from '../../common/utils/sale-aggregate.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RequestUser } from '../../common/interfaces/request-user.interface';
 import {
@@ -450,18 +451,13 @@ export class StatsService {
       }),
     ]);
 
-    // COGS needs costPrice × quantity, which a single _sum can't express, so
-    // pull just the two numeric columns for the matching items and reduce.
-    // (Only quantity + costPrice are selected — nothing identifying.)
-    const costRows = await this.prisma.saleItem.findMany({
-      where: { sale: saleWhere },
-      select: { quantity: true, costPrice: true },
-    });
-
-    let capital = 0;
-    for (const row of costRows) {
-      capital += Number(row.costPrice) * row.quantity;
-    }
+    // Return one COGS total instead of every matching historical item.
+    const [cost] = await this.prisma.$queryRaw<Array<{ capital: Prisma.Decimal }>>`
+      SELECT COALESCE(SUM(i.cost_price * i.quantity), 0) AS capital
+      FROM sale_items i JOIN sales s ON s.id = i.sale_id
+      WHERE ${saleAggregatePredicate({ status: SaleStatus.APPROVED, branchId, dateRange })}
+    `;
+    const capital = Number(cost?.capital ?? 0);
 
     const revenue = Number(itemAgg._sum.subTotal ?? 0);
     const totalDiscount = Number(itemAgg._sum.discount ?? 0);

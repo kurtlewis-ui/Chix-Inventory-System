@@ -61,6 +61,7 @@ describe('SalesService', () => {
       // $transaction(fn) runs the callback with a `tx` that reuses the same
       // mocks, so transactional logic (claims, stock restore) is exercised.
       $transaction: jest.fn(),
+      $queryRaw: jest.fn(),
     };
     // Default: run the callback form of $transaction with `prisma` as `tx`.
     mockPrisma.$transaction.mockImplementation(async (arg: any) =>
@@ -73,6 +74,33 @@ describe('SalesService', () => {
 
     service = module.get(SalesService);
     prisma = module.get(PrismaService);
+  });
+
+  describe('database summaries', () => {
+    it('returns whole-filter totals independently of the visible page', async () => {
+      prisma.sale.count.mockResolvedValue(201);
+      prisma.sale.findMany.mockResolvedValue([]);
+      prisma.$queryRaw.mockResolvedValue([{ grossSales: '600.50', discount: '20.50', cash: '200', gcash: '300', bankTransfer: '80' }]);
+      const result = await service.findRecords({ page: 2, limit: 20, branchId: BRANCH_ID, search: 'RELX' }, OWNER);
+      expect(result.summary).toEqual({ grossSales: 600.5, discount: 20.5, cash: 200, gcash: 300, bankTransfer: 80, total: 580, count: 201 });
+      expect(prisma.saleItem.findMany).not.toHaveBeenCalled();
+      const sql = prisma.$queryRaw.mock.calls[0][0];
+      expect(sql.values).toContain(BRANCH_ID);
+      expect(sql.values).toContain('%RELX%');
+    });
+
+    it('keeps staff scope even when another branch is requested, and returns zero for no matches', async () => {
+      prisma.user.findUnique.mockResolvedValue({ branchId: BRANCH_ID });
+      prisma.sale.count.mockResolvedValue(0);
+      prisma.sale.findMany.mockResolvedValue([]);
+      prisma.$queryRaw.mockResolvedValue([{ grossSales: 0, discount: 0, cash: 0, gcash: 0, bankTransfer: 0 }]);
+      const result = await service.findPending({ branchId: 'other-branch' }, STAFF);
+      expect(result.summary.total).toBe(0);
+      const sql = prisma.$queryRaw.mock.calls[0][0];
+      expect(sql.values).toContain(BRANCH_ID);
+      expect(sql.values).not.toContain('other-branch');
+      expect(sql.values).toContain('PENDING');
+    });
   });
 
   // ---- create: product availability --------------------------------------

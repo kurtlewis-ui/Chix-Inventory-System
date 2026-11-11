@@ -10,6 +10,7 @@ import { CreateSaleDto } from './dto/create-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { QuerySaleDto } from './dto/query-sale.dto';
 import { RequestUser } from '../../common/interfaces/request-user.interface';
+import { paymentSummarySql, saleAggregatePredicate } from '../../common/utils/sale-aggregate.util';
 import { businessDateOnly, businessDayRange } from '../../common/utils/business-day.util';
 
 @Injectable()
@@ -155,42 +156,28 @@ export class SalesService {
         skip,
         take: limit,
       }),
-      // Summary across the whole filtered set (not just current page).
-      // Payment now varies per item, so this sums item-level amounts
-      // (splitting Split-payment items across their buckets) rather than a
-      // DB-level groupBy on the sale's single payment method.
-      this.prisma.saleItem.findMany({
-        where: { sale: where },
-        select: { paymentMethod: true, subTotal: true, paymentSplit: true, discount: true, unitPrice: true, quantity: true },
-      }),
+      // Aggregate the complete filtered set in PostgreSQL, not in Node.
+      this.prisma.$queryRaw<Array<{
+        grossSales: Prisma.Decimal; discount: Prisma.Decimal;
+        cash: Prisma.Decimal; gcash: Prisma.Decimal; bankTransfer: Prisma.Decimal;
+      }>>(paymentSummarySql(saleAggregatePredicate({
+        status,
+        branchId: where.branchId as string | undefined,
+        dateRange: businessDayRange(startDate, endDate),
+        search,
+      }))),
     ]);
 
-    // grossSales = Σ(unitPrice × qty) BEFORE discount. total (net) below is
-    // grossSales − discount. Showing both makes the reduction transparent:
-    // Gross − Discount = Net. The discount is only ever subtracted ONCE
-    // (gross → net); the cash/gcash buckets already use the net subTotal.
-    const summary = { grossSales: 0, cash: 0, gcash: 0, bankTransfer: 0, discount: 0, total: 0, count: total };
-    for (const item of summaryItems) {
-      summary.grossSales += Number(item.unitPrice) * item.quantity;
-      // Total Discount is the sum of per-item discounts. This is DISPLAY only:
-      // the payment buckets below use subTotal (= unitPrice*qty - discount),
-      // so the discount is already deducted from cash/gcash/total — we must NOT
-      // subtract it again anywhere or it would be double-counted.
-      summary.discount += Number(item.discount || 0);
-      if (item.paymentMethod === 'Split' && item.paymentSplit) {
-        const split = item.paymentSplit as unknown as {
-          cash: number; gcash: number; bankTransfer: number;
-        };
-        summary.cash += Number(split.cash || 0);
-        summary.gcash += Number(split.gcash || 0);
-        summary.bankTransfer += Number(split.bankTransfer || 0);
-      } else {
-        const amount = Number(item.subTotal);
-        if (item.paymentMethod === 'Cash') summary.cash += amount;
-        else if (item.paymentMethod === 'Gcash') summary.gcash += amount;
-        else if (item.paymentMethod === 'BankTransfer') summary.bankTransfer += amount;
-      }
-    }
+    const row = summaryItems[0];
+    const summary = {
+      grossSales: Number(row?.grossSales ?? 0),
+      discount: Number(row?.discount ?? 0),
+      cash: Number(row?.cash ?? 0),
+      gcash: Number(row?.gcash ?? 0),
+      bankTransfer: Number(row?.bankTransfer ?? 0),
+      total: 0,
+      count: total,
+    };
     summary.total = summary.cash + summary.gcash + summary.bankTransfer;
 
     return {
