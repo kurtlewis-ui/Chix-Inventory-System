@@ -174,7 +174,7 @@ export class ProductsService {
         select: this.selectFull(branchId),
         // Manual display order (owners can drag to reorder); creation order is
         // the tie-breaker so products without an explicit order stay stable.
-        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
         skip,
         take: limit,
       }),
