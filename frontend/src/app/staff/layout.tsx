@@ -233,7 +233,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
 
       {/* Main content — applies theme */}
       <div className={`flex-1 md:ml-[220px] content-transition ${contentTheme === 'light' ? 'content-light' : ''}`}>
-        <main className="px-4 py-6 pt-20 sm:px-6 md:pt-6 lg:px-8 max-w-[1200px] xl:max-w-[1440px] mx-auto bg-page-bg min-h-screen">{children}</main>
+        <main className="px-4 pb-28 pt-20 sm:px-6 md:pt-6 lg:px-8 max-w-[1200px] xl:max-w-[1440px] mx-auto bg-page-bg min-h-screen">{children}</main>
       </div>
 
       <DraftBag />

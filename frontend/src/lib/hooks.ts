@@ -82,8 +82,9 @@ interface ListResult<T> {
 async function getList<T>(
   url: string,
   params?: Record<string, unknown>,
+  signal?: AbortSignal,
 ): Promise<ListResult<T>> {
-  const res = await api.get(url, { params });
+  const res = await api.get(url, { params, signal });
   return {
     data: (res.data.data ?? []) as T[],
     pagination: res.data.pagination,
@@ -357,17 +358,37 @@ export interface ProductMutationInput {
   quantities?: { branchId: string; quantity: number }[];
 }
 
-export function useProducts(params?: { search?: string; brandId?: string; branchId?: string; page?: number; limit?: number }) {
+export function useProducts(params?: { search?: string; brandId?: string; branchId?: string; page?: number; limit?: number; all?: boolean; requireBranch?: boolean }) {
   return useQuery({
     queryKey: ['products', params ?? {}],
-    queryFn: () =>
-      getList<Product>('/products', {
-        limit: params?.limit ?? 20,
-        page: params?.page ?? 1,
+    enabled: !params?.requireBranch || !!params?.branchId,
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
+    refetchOnMount: params?.requireBranch ? false : true,
+    refetchOnReconnect: !params?.requireBranch,
+    queryFn: async ({ signal }) => {
+      const filters = {
+        limit: params?.all ? 200 : params?.limit ?? 20,
+        page: params?.all ? 1 : params?.page ?? 1,
         search: params?.search || undefined,
         brandId: params?.brandId || undefined,
         branchId: params?.branchId || undefined,
-      }),
+      };
+      const first = await getList<Product>('/products', filters, signal);
+      if (!params?.all) return first;
+      const products = new Map(first.data.map(product => [product.id, product]));
+      let current = first;
+      let page = 1;
+      while (current.pagination?.hasNext || page < (current.pagination?.totalPages ?? 1)) {
+        current = await getList<Product>('/products', { ...filters, page: ++page }, signal);
+        current.data.forEach(product => products.set(product.id, product));
+      }
+      const data = [...products.values()];
+      return { ...first, data, pagination: first.pagination ? {
+        ...first.pagination, page: 1, limit: data.length || 200, total: data.length,
+        totalPages: 1, hasNext: false, hasPrev: false,
+      } : undefined };
+    },
   });
 }
 

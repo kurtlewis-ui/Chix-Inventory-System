@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { matchesProductSearch } from '@/lib/product-search';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Search, X } from 'lucide-react';
+import { ArrowLeft, Search, X, RefreshCw } from 'lucide-react';
 import { useBrands, useProducts } from '@/lib/hooks';
 import { useAuthStore } from '@/lib/store';
 import { useDraftStore } from '@/lib/draft';
@@ -46,16 +47,15 @@ export default function BrandProductsPage() {
   const { data: brandData } = useBrands();
   const brand = (brandData?.data ?? []).find((b) => b.id === brandId);
 
-  // Debounce search by 300ms so typing fires one request after the user stops,
-  // instead of one request per keystroke (matches the pattern on the brands /
-  // staff landing pages).
+  // Filter the complete cached catalogue locally; search makes no API request.
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data, isLoading, isError, error } = useProducts({ brandId, branchId, search: debouncedSearch });
-  const products = (data?.data ?? []) as StaffProduct[];
+  const { data, isLoading, isError, error, refetch, isFetching } = useProducts({ brandId, branchId, all: true, requireBranch: true });
+  const products = useMemo(() => ((data?.data ?? []) as StaffProduct[])
+    .filter(product => matchesProductSearch(product, debouncedSearch)), [data?.data, debouncedSearch]);
 
   // Draft items for auto-subtracting stock display
   const draftItems = useDraftStore((s) => s.items);
@@ -92,6 +92,10 @@ export default function BrandProductsPage() {
             className="w-full rounded-lg border border-input-border bg-input-bg py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-input-focus"
           />
         </div>
+        <button type="button" onClick={() => refetch()} disabled={!branchId || isFetching} aria-label="Refresh products" title="Refresh products"
+          className="rounded-lg border border-input-border p-2 text-text-secondary disabled:opacity-40">
+          <RefreshCw size={18} className={isFetching ? 'animate-spin' : ''} />
+        </button>
       </div>
 
       {!branchId ? (
