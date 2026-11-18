@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Store, Clock3, CalendarDays, Package, ShoppingBag, Banknote, Wallet } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { api, getApiErrorMessage } from '@/lib/api';
@@ -72,19 +72,27 @@ export function ProductSalesSummary({ kind }: { kind: 'sales' | 'disposals' }) {
     <h2 className="mb-2 text-lg font-bold text-text-primary">{title}</h2>
     <p className="mb-4 text-xs text-text-secondary">Approved {sales ? 'sales' : 'disposals'} only · Philippine business dates · Each section has its own filters.</p>
     <div className="mb-4 grid items-end grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <Select ariaLabel={`${title} period`} value={period} onChange={choosePeriod} options={[
-        { value: 'today', label: 'Daily — Today' }, { value: 'week', label: 'Weekly — This Week' },
-        { value: 'month', label: 'Monthly — This Month' }, { value: 'year', label: 'Yearly — This Year' },
-        { value: 'all', label: 'All Time' }, { value: 'custom', label: 'Custom Range' },
-      ]} />
-      <Select ariaLabel={`${title} shop`} value={branchId} onChange={v => { setBranchId(v); setPage(1); }} options={[
-        { value: '', label: 'All Shops' }, ...(branches?.data ?? []).map(b => ({ value: b.id, label: b.name })),
-      ]} />
-      <label className="min-w-0 text-xs text-text-secondary">From
-        <input aria-label={`${title} from`} type="date" value={dates.start} onChange={e => { setPeriod('custom'); setDates(d => ({ ...d, start: e.target.value })); setPage(1); }} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border border-input-border bg-input-bg px-3 text-sm text-text-primary" />
+      <div className="min-w-0">
+        <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-text-secondary"><Store size={14} aria-hidden="true" className={isDark ? 'text-blue-300' : 'text-blue-700'} />SHOPS</span>
+        <Select ariaLabel={`${title} shop`} value={branchId} onChange={v => { setBranchId(v); setPage(1); }} options={[
+          { value: '', label: 'All Shops' }, ...(branches?.data ?? []).map(b => ({ value: b.id, label: b.name })),
+        ]} />
+      </div>
+      <div className="min-w-0">
+        <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-text-secondary"><Clock3 size={14} aria-hidden="true" className={isDark ? 'text-violet-300' : 'text-violet-700'} />PERIOD</span>
+        <Select ariaLabel={`${title} period`} value={period} onChange={choosePeriod} options={[
+          { value: 'today', label: 'Daily — Today' }, { value: 'week', label: 'Weekly — This Week' },
+          { value: 'month', label: 'Monthly — This Month' }, { value: 'year', label: 'Yearly — This Year' },
+          { value: 'all', label: 'All Time' }, { value: 'custom', label: 'Custom Range' },
+        ]} />
+      </div>
+      <label className="min-w-0 text-xs text-text-secondary">
+        <span className="mb-2 flex items-center gap-1.5 font-semibold tracking-wide"><CalendarDays size={14} aria-hidden="true" className={isDark ? 'text-amber-300' : 'text-amber-700'} />FROM</span>
+        <input aria-label={`${title} from`} type="date" value={dates.start} onChange={e => { setPeriod('custom'); setDates(d => ({ ...d, start: e.target.value })); setPage(1); }} className="min-h-11 w-full min-w-0 rounded-lg border border-input-border bg-input-bg px-3 text-sm text-text-primary" />
       </label>
-      <label className="min-w-0 text-xs text-text-secondary">To
-        <input aria-label={`${title} to`} type="date" value={dates.end} onChange={e => { setPeriod('custom'); setDates(d => ({ ...d, end: e.target.value })); setPage(1); }} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border border-input-border bg-input-bg px-3 text-sm text-text-primary" />
+      <label className="min-w-0 text-xs text-text-secondary">
+        <span className="mb-2 flex items-center gap-1.5 font-semibold tracking-wide"><CalendarDays size={14} aria-hidden="true" className={isDark ? 'text-amber-300' : 'text-amber-700'} />TO</span>
+        <input aria-label={`${title} to`} type="date" value={dates.end} onChange={e => { setPeriod('custom'); setDates(d => ({ ...d, end: e.target.value })); setPage(1); }} className="min-h-11 w-full min-w-0 rounded-lg border border-input-border bg-input-bg px-3 text-sm text-text-primary" />
       </label>
     </div>
     {invalidDates ? <p role="status" className="py-6 text-sm text-accent-orange">{invalidDates}</p>
@@ -102,13 +110,13 @@ export function ProductSalesSummary({ kind }: { kind: 'sales' | 'disposals' }) {
       <input type="search" aria-label={`${title} search`} placeholder="Search products or brands…" value={search} onChange={e => { setSearch(e.target.value); setSelected(null); setPage(1); }} className="min-h-11 w-full rounded-lg border border-input-border bg-input-bg px-3 text-sm text-text-primary sm:max-w-sm" />
       {selected && <button onClick={() => { setSelected(null); setPage(1); }} className="btn-secondary max-w-full break-words text-xs" aria-label={`Clear product filter for ${selected.name}`}>{selected.name} · Clear filter</button>}
     </div>
-        <div className={`mb-5 grid grid-cols-2 gap-3 ${sales ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`} aria-label={`${title} totals`}>
+        <div className={`mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 ${sales ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`} aria-label={`${title} totals`}>
           {[
-            ['Matching Products', data.totals.products.toLocaleString()],
-            [sales ? 'Total Quantity Sold' : 'Total Quantity Disposed', data.totals.quantity.toLocaleString()],
-            ...(sales ? [['Sales Revenue', money(data.totals.revenue)]] : []),
-            [sales ? 'Total Capital' : 'Total Value Lost', money(data.totals.capital)],
-          ].map(([label, value]) => <div key={label} className="min-w-0 rounded-lg bg-surface-muted p-3"><p className="text-xs text-text-secondary">{label}</p><p className="mt-1 break-words text-lg font-bold tabular-nums text-text-primary">{value}</p></div>)}
+            { label: 'Matching Products', value: data.totals.products.toLocaleString(), icon: Package, tone: isDark ? 'border-violet-400/20 bg-violet-400/5 text-violet-300' : 'border-violet-200 bg-violet-50/60 text-violet-800' },
+            { label: sales ? 'Total Quantity Sold' : 'Total Quantity Disposed', value: data.totals.quantity.toLocaleString(), icon: ShoppingBag, tone: isDark ? 'border-blue-400/20 bg-blue-400/5 text-blue-300' : 'border-blue-200 bg-blue-50/60 text-blue-800' },
+            ...(sales ? [{ label: 'Sales Revenue', value: money(data.totals.revenue), icon: Banknote, tone: isDark ? 'border-emerald-400/20 bg-emerald-400/5 text-emerald-300' : 'border-emerald-200 bg-emerald-50/60 text-emerald-800' }] : []),
+            { label: sales ? 'Total Capital' : 'Total Value Lost', value: money(data.totals.capital), icon: Wallet, tone: isDark ? 'border-amber-400/20 bg-amber-400/5 text-amber-300' : 'border-amber-200 bg-amber-50/60 text-amber-800' },
+          ].map(({ label, value, icon: Icon, tone }) => <div key={label} className={`min-w-0 rounded-lg border p-3 ${tone}`}><p className="flex items-center gap-1.5 text-xs text-text-secondary"><Icon size={14} aria-hidden="true" className="shrink-0 text-current" />{label}</p><p className="mt-1 break-words text-lg font-bold tabular-nums">{value}</p></div>)}
         </div>
         <p className="mb-4 text-xs text-text-muted">Totals cover every matching product and page. {sales && 'Revenue is after discounts. Capital uses each sale’s saved unit cost × quantity.'}</p>
         {data.top.length > 0 && <>
