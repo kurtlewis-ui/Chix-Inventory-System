@@ -5,6 +5,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequestUser } from '../../common/interfaces/request-user.interface';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { ProductReportQueryDto } from './dto/product-report-query.dto';
 
 @ApiTags('stats')
 @ApiBearerAuth()
@@ -12,6 +13,18 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 @UseGuards(RolesGuard)
 export class StatsController {
   constructor(private readonly statsService: StatsService) {}
+
+  @Get('product-sales')
+  @Roles('Owner')
+  async productSales(@Query() query: ProductReportQueryDto) {
+    return { success: true, data: await this.statsService.productReport('sales', query) };
+  }
+
+  @Get('product-disposals')
+  @Roles('Owner')
+  async productDisposals(@Query() query: ProductReportQueryDto) {
+    return { success: true, data: await this.statsService.productReport('disposals', query) };
+  }
 
   // Company-wide analytics are confidential — Owner/Admin only. Staff must
   // NOT be able to read business-wide dashboards, sales overviews, or top

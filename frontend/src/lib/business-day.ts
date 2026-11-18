@@ -65,7 +65,7 @@ export function msUntilNextBusinessDay(): number {
   return nextMidnight - clock.getTime() + 1000;
 }
 
-type QuickRange = 'today' | 'week' | 'month' | 'all';
+type QuickRange = 'today' | 'week' | 'month' | 'year' | 'all';
 
 /**
  * { start, end } YYYY-MM-DD for a quick range, in PH business time.
@@ -82,6 +82,7 @@ export function phQuickRangeDates(range: QuickRange): { start: string; end: stri
     const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysSinceMonday));
     return { start: ymd(monday), end: todayStr };
   }
+  if (range === 'year') return { start: ymd(new Date(Date.UTC(now.getUTCFullYear(), 0, 1))), end: todayStr };
   // month
   const first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   return { start: ymd(first), end: todayStr };
