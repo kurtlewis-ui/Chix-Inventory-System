@@ -1,6 +1,6 @@
 # Chix Sales Records
 
-Sales Records opens on All Shops and All Time independently of the shared branch selection elsewhere. Filter order is SHOPS, PERIOD, FROM, TO with neutral icons. Periods include Daily/Today, Weekly/This Week, Monthly/This Month, Yearly/This Year, All Time and Custom Range. Chix retains its midnight-to-midnight Philippine calendar, Monday weeks and one cutoff timer for presets; there is no new polling interval. Custom ranges require both dates and reject reversed ranges. Clear Filter restores the initial state.
+Sales Records opens on All Shops and All Time independently of the shared branch selection elsewhere. Filter order is SHOPS, PERIOD, FROM, TO with neutral icons. Periods include Daily/Today, Weekly/This Week, Monthly/This Month, Yearly/This Year, All Time and manual From/To dates. Chix retains its midnight-to-midnight Philippine calendar, Monday weeks and one cutoff timer for presets; there is no new polling interval. Custom ranges require both dates and reject reversed ranges. Clear Filter restores the initial state.
 
 The page requests ten sales at a time from the records endpoint and uses the server's complete matching count/page metadata. It no longer pages only the first 200 downloaded sales. Ordering uses createdAt then id to make tied timestamps stable. Each sale stays together, with its own item rows and total. Navigation is disabled while fetching or waiting for search debounce.
 
@@ -17,3 +17,10 @@ A searchable, paginated Exact Product picker reads approved historical items und
 Exact filtering runs before the sale count, item include, summary and pagination. The returned sale total is the sum of matching item subtotals, excluding other products in the same transaction. The active filter bar shows the product, shop and dates; Clear Product retains the other filters and Clear Filter resets all. Selecting an exact product clears broad text search; typing broad search clears the exact selection. Summary labels state that totals cover every matching page.
 
 Validation includes mixed-product sales, exact ID vs similarly named sibling, historical renames/deleted identities, approved-only scope, shop/date exclusions, product-choice pagination, quantity/money across result pages and mobile/light/dark Owner/Admin browser flows.
+
+
+## Row selection
+
+Rows: 10, 25, 50, 100 and All appears above the table. The default is ten sales; items belonging to one sale stay together. Changing row size resets to page one. All explicitly requests all approved matching sales, preserving exact product/search/shop/date scope and totals, with one-page metadata. Pending Sales keeps its bounded pagination. No background polling or automatic all-history preload is introduced.
+
+The Records period menu no longer includes Custom Range. FROM and TO remain directly editable; manual edits display Manual dates and stop preset rollover. Daily, Weekly, Monthly, Yearly and All Time remain available.

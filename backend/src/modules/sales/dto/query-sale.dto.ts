@@ -1,7 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsDateString,
+  IsBoolean,
   IsInt,
   IsOptional,
   IsString,
@@ -26,6 +27,12 @@ export class QuerySaleDto {
   @Min(1)
   @Max(200)
   limit?: number = 20;
+
+  @ApiProperty({ required: false, description: 'Return all matching approved Records when explicitly requested' })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' ? true : value === 'false' ? false : value)
+  @IsBoolean()
+  all?: boolean;
 
   @ApiProperty({ required: false })
   @IsOptional()

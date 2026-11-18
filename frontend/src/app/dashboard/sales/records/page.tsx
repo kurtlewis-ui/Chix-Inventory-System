@@ -57,7 +57,7 @@ export default function SalesRecordsPage() {
   const [period, setPeriod] = useState<QuickRange | 'custom'>('all');
   const [page, setPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const limit = 10;
+  const [limit, setLimit] = useState(10);
   const resetPage = () => setPage(1);
   useEffect(() => {
     if (search.trim() === debouncedSearch) return;
@@ -135,10 +135,10 @@ export default function SalesRecordsPage() {
             <Select value={selectedShop} onChange={v => { setSelectedShop(v); resetPage(); }} ariaLabel="Shop" options={[{ value: '', label: 'All Shops' }, ...branches.map(b => ({ value: b.id, label: b.name }))]} />
           </div>
           <div className="min-w-0"><span className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-text-secondary"><Clock3 size={14} aria-hidden="true" />PERIOD</span>
-            <Select value={period} onChange={choosePeriod} ariaLabel="Period" options={[
+            <Select value={period === 'custom' ? '' : period} placeholder="Manual dates" onChange={choosePeriod} ariaLabel="Period" options={[
               { value: 'today', label: 'Daily — Today' }, { value: 'week', label: 'Weekly — This Week' },
               { value: 'month', label: 'Monthly — This Month' }, { value: 'year', label: 'Yearly — This Year' },
-              { value: 'all', label: 'All Time' }, { value: 'custom', label: 'Custom Range' },
+              { value: 'all', label: 'All Time' },
             ]} />
           </div>
           <label className="min-w-0"><span className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-text-secondary"><CalendarDays size={14} aria-hidden="true" />FROM</span>
@@ -165,6 +165,12 @@ export default function SalesRecordsPage() {
           <span className="max-w-full break-words font-medium text-text-primary">{selectedProduct ? `${selectedProduct.name} (${selectedProduct.brand})` : debouncedSearch ? `Search: ${debouncedSearch}` : 'All products'}</span>
           <span>· {branches.find(b => b.id === selectedShop)?.name ?? 'All Shops'} · {startDate && endDate ? `${startDate} – ${endDate}` : 'All Time'}</span>
           {selectedProduct && <button type="button" onClick={() => { setSelectedProduct(null); resetPage(); }} className="rounded-md border border-input-border px-2 py-1 text-text-primary hover:bg-surface-muted">Clear Product</button>}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 border-b border-card-border px-4 py-3 text-sm text-text-secondary">
+          <span>Rows</span>
+          <div className="w-24 shrink-0"><Select ariaLabel="Sales records rows per page" value={String(limit)} onChange={value => { setLimit(Number(value)); resetPage(); }} options={[10, 25, 50, 100, 0].map(value => ({ value: String(value), label: value === 0 ? 'All' : String(value) }))} /></div>
+          <span className="text-xs text-text-muted">{limit === 0 ? 'All matching sales' : 'sales per page'}</span>
         </div>
 
         <div className="overflow-x-auto">
