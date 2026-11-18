@@ -748,21 +748,25 @@ export interface SaleCreateInput {
 }
 
 export function useSalesRecords(params?: {
+  page?: number;
+  limit?: number;
   search?: string;
   branchId?: string;
   startDate?: string;
   endDate?: string;
-}) {
+}, enabled = true) {
   return useQuery({
     queryKey: ['sales', 'records', params ?? {}],
-    queryFn: () =>
+    enabled,
+    queryFn: ({ signal }) =>
       getList<Sale>('/sales/records', {
-        limit: 200,
+        page: params?.page ?? 1,
+        limit: params?.limit ?? 10,
         search: params?.search || undefined,
         branchId: params?.branchId || undefined,
         startDate: params?.startDate || undefined,
         endDate: params?.endDate || undefined,
-      }),
+      }, signal),
   });
 }
 

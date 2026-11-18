@@ -116,6 +116,10 @@ export class SalesService {
   ) {
     const { page = 1, limit = 20, search, branchId, startDate, endDate } = query;
     const skip = (page - 1) * limit;
+    const recordsSearch = status === SaleStatus.APPROVED ? search?.trim() : undefined;
+    if (startDate && endDate && startDate > endDate) {
+      throw new BadRequestException('From date must be on or before To date.');
+    }
 
     const where: Prisma.SaleWhereInput = { status };
 
@@ -137,7 +141,14 @@ export class SalesService {
       where.createdAt = businessDayRange(startDate, endDate);
     }
 
-    if (search) {
+    if (recordsSearch) {
+      // Match literal product/brand text before counting and paging records.
+      const literal = recordsSearch.replace(/[\\%_]/g, '\\$&');
+      where.items = { some: { OR: [
+        { name: { contains: literal, mode: 'insensitive' } },
+        { brandName: { contains: literal, mode: 'insensitive' } },
+      ] } };
+    } else if (search && status !== SaleStatus.APPROVED) {
       where.OR = [
         { items: { some: { name: { contains: search, mode: 'insensitive' } } } },
         { items: { some: { brandName: { contains: search, mode: 'insensitive' } } } },
@@ -152,7 +163,7 @@ export class SalesService {
       this.prisma.sale.findMany({
         where,
         include: this.includeFull(),
-        orderBy: { createdAt: 'asc' },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
         skip,
         take: limit,
       }),
@@ -160,12 +171,13 @@ export class SalesService {
       this.prisma.$queryRaw<Array<{
         grossSales: Prisma.Decimal; discount: Prisma.Decimal;
         cash: Prisma.Decimal; gcash: Prisma.Decimal; bankTransfer: Prisma.Decimal;
-      }>>(paymentSummarySql(saleAggregatePredicate({
+      }>>(paymentSummarySql(Prisma.sql`(${saleAggregatePredicate({
         status,
         branchId: where.branchId as string | undefined,
         dateRange: businessDayRange(startDate, endDate),
-        search,
-      }))),
+        search: status === SaleStatus.APPROVED ? undefined : search,
+      })}) ${recordsSearch ? Prisma.sql`AND (strpos(lower(i.name), lower(${recordsSearch})) > 0
+        OR strpos(lower(i.brand_name), lower(${recordsSearch})) > 0)` : Prisma.empty}`)),
     ]);
 
     const row = summaryItems[0];

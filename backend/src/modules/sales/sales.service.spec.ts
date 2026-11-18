@@ -86,7 +86,31 @@ describe('SalesService', () => {
       expect(prisma.saleItem.findMany).not.toHaveBeenCalled();
       const sql = prisma.$queryRaw.mock.calls[0][0];
       expect(sql.values).toContain(BRANCH_ID);
-      expect(sql.values).toContain('%RELX%');
+      expect(sql.values).toContain('RELX');
+      expect(sql.text).toContain('strpos(lower(i.name)');
+      expect(prisma.sale.findMany.mock.calls[0][0]).toMatchObject({ skip: 20, take: 20, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
+      expect(result.pagination).toMatchObject({ total: 201, totalPages: 11, page: 2, hasNext: true });
+    });
+
+    it('paginates beyond 200 records and applies item search before counting', async () => {
+      prisma.sale.count.mockResolvedValue(235);
+      prisma.sale.findMany.mockResolvedValue([]);
+      prisma.$queryRaw.mockResolvedValue([]);
+      const result = await service.findRecords({ page: 24, limit: 10, search: '100%_V2' }, OWNER);
+      expect(prisma.sale.findMany.mock.calls[0][0]).toMatchObject({ skip: 230, take: 10 });
+      const where = prisma.sale.count.mock.calls[0][0].where;
+      expect(where.items.some.OR).toHaveLength(2);
+      expect(where.OR).toBeUndefined();
+      expect(where.items.some.OR[0].name.contains).toBe('100\\%\\_V2');
+      expect(result.pagination).toMatchObject({ page: 24, total: 235, totalPages: 24, hasNext: false, hasPrev: true });
+      const sql = prisma.$queryRaw.mock.calls[0][0];
+      expect(sql.values).toContain('100%_V2');
+      expect(sql.text).not.toContain('100%_V2');
+    });
+
+    it('rejects reversed dates without querying records', async () => {
+      await expect(service.findRecords({ startDate: '2026-11-15', endDate: '2026-11-01' }, OWNER)).rejects.toThrow('From date');
+      expect(prisma.sale.count).not.toHaveBeenCalled();
     });
 
     it('keeps staff scope even when another branch is requested, and returns zero for no matches', async () => {

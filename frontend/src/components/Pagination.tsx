@@ -56,6 +56,7 @@ interface PaginationProps {
   onNext: () => void;
   /** Word for the items, e.g. "shops", "records". Defaults to "items". */
   noun?: string;
+  disabled?: boolean;
 }
 
 export function Pagination({
@@ -67,6 +68,7 @@ export function Pagination({
   onPrev,
   onNext,
   noun = 'items',
+  disabled = false,
 }: PaginationProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm text-text-secondary">
@@ -79,7 +81,7 @@ export function Pagination({
         <div className="flex items-center gap-1">
           <button
             onClick={onPrev}
-            disabled={page <= 1}
+            disabled={disabled || page <= 1}
             className="rounded-lg border border-input-border px-3 py-1.5 text-sm disabled:opacity-40 hover:bg-white/5 transition"
           >
             Previous
@@ -87,7 +89,7 @@ export function Pagination({
           <span className="px-2 text-text-primary">Page {page} of {totalPages}</span>
           <button
             onClick={onNext}
-            disabled={page >= totalPages}
+            disabled={disabled || page >= totalPages}
             className="rounded-lg border border-input-border px-3 py-1.5 text-sm disabled:opacity-40 hover:bg-white/5 transition"
           >
             Next
