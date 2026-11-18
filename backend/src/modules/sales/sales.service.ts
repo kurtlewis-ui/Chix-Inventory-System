@@ -12,6 +12,7 @@ import { QuerySaleDto } from './dto/query-sale.dto';
 import { RequestUser } from '../../common/interfaces/request-user.interface';
 import { paymentSummarySql, saleAggregatePredicate } from '../../common/utils/sale-aggregate.util';
 import { businessDateOnly, businessDayRange } from '../../common/utils/business-day.util';
+import { exactRecordItemSql, exactRecordItemWhere, recordProductOptions } from './record-products';
 
 @Injectable()
 export class SalesService {
@@ -105,6 +106,15 @@ export class SalesService {
     return this.list(query, actor, SaleStatus.APPROVED);
   }
 
+  async findRecordProducts(query: QuerySaleDto, actor: RequestUser) {
+    let branchId = query.branchId;
+    if (actor.role === 'Staff') {
+      const me = await this.prisma.user.findUnique({ where: { id: actor.userId }, select: { branchId: true } });
+      branchId = me?.branchId ?? '00000000-0000-0000-0000-000000000000';
+    }
+    return recordProductOptions(this.prisma, query, branchId);
+  }
+
   async findPending(query: QuerySaleDto, actor: RequestUser) {
     return this.list(query, actor, SaleStatus.PENDING);
   }
@@ -117,6 +127,9 @@ export class SalesService {
     const { page = 1, limit = 20, search, branchId, startDate, endDate } = query;
     const skip = (page - 1) * limit;
     const recordsSearch = status === SaleStatus.APPROVED ? search?.trim() : undefined;
+    const exactProductKey = status === SaleStatus.APPROVED ? query.productKey : undefined;
+    const exactItemWhere = exactRecordItemWhere(exactProductKey);
+    let recordsItemWhere: Prisma.SaleItemWhereInput | undefined = exactItemWhere;
     if (startDate && endDate && startDate > endDate) {
       throw new BadRequestException('From date must be on or before To date.');
     }
@@ -144,10 +157,11 @@ export class SalesService {
     if (recordsSearch) {
       // Match literal product/brand text before counting and paging records.
       const literal = recordsSearch.replace(/[\\%_]/g, '\\$&');
-      where.items = { some: { OR: [
+      const textMatch: Prisma.SaleItemWhereInput = { OR: [
         { name: { contains: literal, mode: 'insensitive' } },
         { brandName: { contains: literal, mode: 'insensitive' } },
-      ] } };
+      ] };
+      recordsItemWhere = exactItemWhere ? { AND: [exactItemWhere, textMatch] } : textMatch;
     } else if (search && status !== SaleStatus.APPROVED) {
       where.OR = [
         { items: { some: { name: { contains: search, mode: 'insensitive' } } } },
@@ -158,11 +172,13 @@ export class SalesService {
       ];
     }
 
+    if (recordsItemWhere) where.items = { some: recordsItemWhere };
+
     const [total, sales, summaryItems] = await Promise.all([
       this.prisma.sale.count({ where }),
       this.prisma.sale.findMany({
         where,
-        include: this.includeFull(),
+        include: { ...this.includeFull(), items: { ...this.includeFull().items, ...(recordsItemWhere ? { where: recordsItemWhere } : {}) } },
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
         skip,
         take: limit,
@@ -171,12 +187,13 @@ export class SalesService {
       this.prisma.$queryRaw<Array<{
         grossSales: Prisma.Decimal; discount: Prisma.Decimal;
         cash: Prisma.Decimal; gcash: Prisma.Decimal; bankTransfer: Prisma.Decimal;
+        quantity: Prisma.Decimal;
       }>>(paymentSummarySql(Prisma.sql`(${saleAggregatePredicate({
         status,
         branchId: where.branchId as string | undefined,
         dateRange: businessDayRange(startDate, endDate),
         search: status === SaleStatus.APPROVED ? undefined : search,
-      })}) ${recordsSearch ? Prisma.sql`AND (strpos(lower(i.name), lower(${recordsSearch})) > 0
+      })}) AND (${exactRecordItemSql(exactProductKey)}) ${recordsSearch ? Prisma.sql`AND (strpos(lower(i.name), lower(${recordsSearch})) > 0
         OR strpos(lower(i.brand_name), lower(${recordsSearch})) > 0)` : Prisma.empty}`)),
     ]);
 
@@ -189,11 +206,15 @@ export class SalesService {
       bankTransfer: Number(row?.bankTransfer ?? 0),
       total: 0,
       count: total,
+      quantity: Number(row?.quantity ?? 0),
     };
     summary.total = summary.cash + summary.gcash + summary.bankTransfer;
 
     return {
-      data: sales.map((s) => this.serialize(s)),
+      data: sales.map((s) => {
+        const serialized = this.serialize(s);
+        return recordsItemWhere ? { ...serialized, total: serialized.items.reduce((sum: number, item: { subTotal: number }) => sum + item.subTotal, 0) } : serialized;
+      }),
       pagination: this.paginate(page, limit, total),
       summary,
     };

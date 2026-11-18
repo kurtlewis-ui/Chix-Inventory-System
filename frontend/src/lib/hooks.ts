@@ -748,6 +748,7 @@ export interface SaleCreateInput {
 }
 
 export function useSalesRecords(params?: {
+  productKey?: string;
   page?: number;
   limit?: number;
   search?: string;
@@ -760,6 +761,7 @@ export function useSalesRecords(params?: {
     enabled,
     queryFn: ({ signal }) =>
       getList<Sale>('/sales/records', {
+        productKey: params?.productKey || undefined,
         page: params?.page ?? 1,
         limit: params?.limit ?? 10,
         search: params?.search || undefined,

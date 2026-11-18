@@ -7,6 +7,7 @@ import { filterSalesByProduct } from '@/lib/sale-search';
 import { getApiErrorMessage } from '@/lib/api';
 import { Pagination } from '@/components/Pagination';
 import { Select } from '@/components/Select';
+import { RecordProductSelect, type RecordProduct } from '@/components/RecordProductSelect';
 import { DateTimeStack } from '@/components/DateTimeStack';
 import { ProductThumb } from '@/components/ProductThumb';
 import { msUntilNextBusinessDay, phQuickRangeDates, type QuickRange } from '@/lib/business-day';
@@ -45,6 +46,7 @@ function formatDate(iso: string) {
 
 export default function SalesRecordsPage() {
   const [search, setSearch] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<RecordProduct | null>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -80,13 +82,14 @@ export default function SalesRecordsPage() {
     ? 'Choose both From and To dates.'
     : startDate && endDate && startDate > endDate ? 'From date must be on or before To date.' : '';
   const { data, isLoading: queryLoading, isFetching, isError, error } = useSalesRecords({
+    productKey: selectedProduct?.key,
     branchId: selectedShop || undefined,
     startDate: startDate || undefined,
     endDate: endDate || undefined,
     search: debouncedSearch || undefined,
     page, limit,
-  }, !invalidDates);
-  const isLoading = queryLoading || !!invalidDates;
+  }, !invalidDates && search.trim() === debouncedSearch);
+  const isLoading = queryLoading || !!invalidDates || search.trim() !== debouncedSearch;
   const sales = useMemo(() => filterSalesByProduct(data?.data ?? [], debouncedSearch), [data?.data, debouncedSearch]);
   const pagedSales = sales;
   const summary = data?.summary ?? { grossSales: 0, cash: 0, gcash: 0, bankTransfer: 0, discount: 0, total: 0, count: 0 };
@@ -106,6 +109,7 @@ export default function SalesRecordsPage() {
   }
 
   const clearFilters = () => {
+    setSelectedProduct(null);
     setSelectedShop('');
     setPeriod('all');
     setDebouncedSearch('');
@@ -149,11 +153,18 @@ export default function SalesRecordsPage() {
 
       {/* Table */}
       <div className="bg-card-bg rounded-xl border border-card-border shadow-sm">
-        <div className="p-4 border-b border-card-border">
-          <div className="relative w-full sm:max-w-xs">
+        <div className="grid grid-cols-1 items-end gap-4 border-b border-card-border p-4 lg:grid-cols-2">
+          <div className="min-w-0"><span className="mb-2 block text-xs font-semibold tracking-wide text-text-secondary">PRODUCT / BRAND SEARCH</span><div className="relative w-full">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-            <input aria-label="Search records" type="search" placeholder="Search products or brands..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-4 py-2 border border-input-border rounded-lg bg-input-bg text-sm focus:outline-none focus:ring-2 focus:ring-input-focus" />
-          </div>
+            <input aria-label="Search records" type="search" placeholder="Search products or brands..." value={search} onChange={(e) => { setSelectedProduct(null); setSearch(e.target.value); }} className="min-h-11 w-full pl-9 pr-4 py-2 border border-input-border rounded-lg bg-input-bg text-sm focus:outline-none focus:ring-2 focus:ring-input-focus" />
+          </div></div>
+          <RecordProductSelect key={`${selectedShop}/${startDate}/${endDate}`} selected={selectedProduct} disabled={!!invalidDates} scope={{ branchId: selectedShop || undefined, startDate: startDate || undefined, endDate: endDate || undefined }} onSelect={product => { setSelectedProduct(product); setSearch(''); setDebouncedSearch(''); resetPage(); }} />
+        </div>
+
+        <div aria-label="Active records filters" className="flex flex-wrap items-center gap-2 border-b border-card-border px-4 py-3 text-xs text-text-secondary">
+          <span className="max-w-full break-words font-medium text-text-primary">{selectedProduct ? `${selectedProduct.name} (${selectedProduct.brand})` : debouncedSearch ? `Search: ${debouncedSearch}` : 'All products'}</span>
+          <span>· {branches.find(b => b.id === selectedShop)?.name ?? 'All Shops'} · {startDate && endDate ? `${startDate} – ${endDate}` : 'All Time'}</span>
+          {selectedProduct && <button type="button" onClick={() => { setSelectedProduct(null); resetPage(); }} className="rounded-md border border-input-border px-2 py-1 text-text-primary hover:bg-surface-muted">Clear Product</button>}
         </div>
 
         <div className="overflow-x-auto">
@@ -297,9 +308,18 @@ export default function SalesRecordsPage() {
 
         {/* Summary */}
         <div className="p-4 border-t border-card-border" hidden={isLoading || isError}>
+          <p className="mb-3 text-xs text-text-muted">Totals across all matching pages · Approved sales only</p>
           {/* Label left, amount right (tabular-nums) so every peso lines up.
               Gross − Discount = Net Sales, then Net split by payment method. */}
           <div className="border-l-4 border-accent-blue pl-4 max-w-xs space-y-2.5">
+            <div className="flex items-center justify-between gap-4 text-sm">
+              <span className="font-semibold text-text-primary">Total Quantity Sold (units)</span>
+              <span className="font-bold tabular-nums text-text-primary">{(summary.quantity ?? 0).toLocaleString()}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4 text-sm">
+              <span className="text-text-secondary">Matching Sales</span>
+              <span className="font-medium tabular-nums text-text-primary">{summary.count.toLocaleString()}</span>
+            </div>
             <div className="flex items-center justify-between gap-4 text-sm">
               <span className="text-text-secondary">Total Gross Sales</span>
               <span className="font-medium text-text-primary tabular-nums">{peso(summary.grossSales)}</span>

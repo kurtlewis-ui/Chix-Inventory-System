@@ -125,6 +125,14 @@ export class SalesController {
     };
   }
 
+  @Get('record-products')
+  @Roles('Owner', 'Admin')
+  @ApiOperation({ summary: 'Search historical product identities in approved records' })
+  async recordProducts(@Query() query: QuerySaleDto, @CurrentUser() user: RequestUser) {
+    const result = await this.salesService.findRecordProducts(query, user);
+    return { success: true, data: result.data, pagination: result.pagination };
+  }
+
   @Get('pending')
   @ApiOperation({ summary: 'List pending sales awaiting approval' })
   async pending(@Query() query: QuerySaleDto, @CurrentUser() user: RequestUser) {

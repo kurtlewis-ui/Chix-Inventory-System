@@ -7,6 +7,7 @@ import {
   IsString,
   IsUUID,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 
@@ -30,6 +31,12 @@ export class QuerySaleDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiProperty({ required: false, description: 'Exact historical product identity for Records' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  productKey?: string;
 
   @ApiProperty({ required: false, description: 'Filter by branch ID' })
   @IsOptional()

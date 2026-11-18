@@ -29,6 +29,7 @@ export function saleAggregatePredicate(scope: {
 /** One row crosses the database connection, regardless of the number of items. */
 export function paymentSummarySql(predicate: Prisma.Sql): Prisma.Sql {
   return Prisma.sql`SELECT
+    COALESCE(SUM(i.quantity), 0) AS quantity,
     COALESCE(SUM(i.unit_price * i.quantity), 0) AS "grossSales",
     COALESCE(SUM(i.discount), 0) AS discount,
     COALESCE(SUM(CASE WHEN i.payment_method = 'Cash' THEN i.sub_total

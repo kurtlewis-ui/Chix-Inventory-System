@@ -82,7 +82,7 @@ describe('SalesService', () => {
       prisma.sale.findMany.mockResolvedValue([]);
       prisma.$queryRaw.mockResolvedValue([{ grossSales: '600.50', discount: '20.50', cash: '200', gcash: '300', bankTransfer: '80' }]);
       const result = await service.findRecords({ page: 2, limit: 20, branchId: BRANCH_ID, search: 'RELX' }, OWNER);
-      expect(result.summary).toEqual({ grossSales: 600.5, discount: 20.5, cash: 200, gcash: 300, bankTransfer: 80, total: 580, count: 201 });
+      expect(result.summary).toEqual({ grossSales: 600.5, discount: 20.5, cash: 200, gcash: 300, bankTransfer: 80, total: 580, count: 201, quantity: 0 });
       expect(prisma.saleItem.findMany).not.toHaveBeenCalled();
       const sql = prisma.$queryRaw.mock.calls[0][0];
       expect(sql.values).toContain(BRANCH_ID);
@@ -111,6 +111,38 @@ describe('SalesService', () => {
     it('rejects reversed dates without querying records', async () => {
       await expect(service.findRecords({ startDate: '2026-11-15', endDate: '2026-11-01' }, OWNER)).rejects.toThrow('From date');
       expect(prisma.sale.count).not.toHaveBeenCalled();
+    });
+
+    it('uses the exact item identity for rows, matching sales, quantity and money', async () => {
+      const productKey = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+      prisma.sale.count.mockResolvedValue(12);
+      prisma.sale.findMany.mockResolvedValue([{ id: 'sale', total: 999, items: [
+        { id: 'one', subTotal: 190, quantity: 2, unitPrice: 100 },
+        { id: 'two', subTotal: 360, quantity: 3, unitPrice: 120 },
+      ] }]);
+      prisma.$queryRaw.mockResolvedValue([{ quantity: 40, grossSales: 4000, discount: 10, cash: 3990 }]);
+      const result = await service.findRecords({ productKey, page: 2, limit: 10 }, OWNER);
+      const args = prisma.sale.findMany.mock.calls[0][0];
+      expect(args.where.items).toEqual({ some: { productId: productKey } });
+      expect(args.include.items.where).toEqual({ productId: productKey });
+      expect(result.data[0].total).toBe(550);
+      expect(result.summary).toMatchObject({ quantity: 40, count: 12, total: 3990 });
+      expect(prisma.$queryRaw.mock.calls[0][0].values).toContain(productKey);
+    });
+
+    it('rejects malformed exact product keys without querying sales', async () => {
+      await expect(service.findRecords({ productKey: 'V2 Transparent' }, OWNER)).rejects.toThrow('valid exact product');
+      expect(prisma.sale.count).not.toHaveBeenCalled();
+    });
+
+    it('keeps staff branch scope for historical product choices', async () => {
+      prisma.user.findUnique.mockResolvedValue({ branchId: BRANCH_ID });
+      prisma.$queryRaw.mockResolvedValue([{ rows: [], total: 0 }]);
+      await service.findRecordProducts({ branchId: 'other-branch' }, STAFF);
+      const sql = prisma.$queryRaw.mock.calls[0][0];
+      expect(sql.values).toContain(BRANCH_ID);
+      expect(sql.values).not.toContain('other-branch');
+      expect(sql.values).toContain('APPROVED');
     });
 
     it('keeps staff scope even when another branch is requested, and returns zero for no matches', async () => {
