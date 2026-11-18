@@ -1,24 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { isUUID } from 'class-validator';
+import { historicalProductIdentity as identity } from '../../common/utils/historical-product.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { businessDayRange } from '../../common/utils/business-day.util';
 import { saleAggregatePredicate } from '../../common/utils/sale-aggregate.util';
 import { QuerySaleDto } from './dto/query-sale.dto';
-
-/** Historical identity: catalog IDs survive renames; deleted IDs use saved labels. */
-function identity(key: string): { id: string } | { name: string; brand: string } {
-  if (isUUID(key)) return { id: key };
-  if (key.startsWith('snapshot:')) {
-    try {
-      const labels = JSON.parse(key.slice(9));
-      if (Array.isArray(labels) && labels.length === 2 && labels.every(v => typeof v === 'string')) {
-        return { name: labels[0], brand: labels[1] };
-      }
-    } catch { /* Reject malformed identities below. */ }
-  }
-  throw new BadRequestException('Choose a valid exact product.');
-}
 
 export function exactRecordItemWhere(key?: string): Prisma.SaleItemWhereInput | undefined {
   if (!key) return undefined;

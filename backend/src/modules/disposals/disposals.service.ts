@@ -10,6 +10,7 @@ import { CreateDisposalDto } from './dto/create-disposal.dto';
 import { QueryDisposalDto } from './dto/query-disposal.dto';
 import { RequestUser } from '../../common/interfaces/request-user.interface';
 import { businessDayRange } from '../../common/utils/business-day.util';
+import { disposalProductOptions, exactDisposalWhere } from './record-products';
 
 @Injectable()
 export class DisposalsService {
@@ -346,6 +347,7 @@ export class DisposalsService {
   async findAll(query: QueryDisposalDto, actor: RequestUser, status?: DisposalStatus) {
     const { page = 1, limit = 50, search, branchId, startDate, endDate } = query;
     const skip = (page - 1) * limit;
+    if (startDate && endDate && startDate > endDate) throw new BadRequestException('From date must be on or before To date.');
 
     const where: Prisma.DisposalWhereInput = {};
     if (status) where.status = status;
@@ -364,19 +366,22 @@ export class DisposalsService {
     }
 
     if (search) {
+      const literal = search.trim().replace(/[\\%_]/g, '\\$&');
       where.OR = [
-        { productName: { contains: search, mode: 'insensitive' } },
-        { brandName: { contains: search, mode: 'insensitive' } },
-        { reason: { contains: search, mode: 'insensitive' } },
+        { productName: { contains: literal, mode: 'insensitive' } },
+        { brandName: { contains: literal, mode: 'insensitive' } },
+        { reason: { contains: literal, mode: 'insensitive' } },
       ];
     }
+    if (query.productKey) Object.assign(where, exactDisposalWhere(query.productKey));
+    if (query.reason?.trim()) where.reason = { contains: query.reason.trim().replace(/[\\%_]/g, '\\$&'), mode: 'insensitive' };
 
     const [total, disposals, agg] = await Promise.all([
       this.prisma.disposal.count({ where }),
       this.prisma.disposal.findMany({
         where,
         include: this.includeFull(),
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip,
         take: limit,
       }),
@@ -399,6 +404,11 @@ export class DisposalsService {
         count: total,
       },
     };
+  }
+
+  async findRecordProducts(query: QueryDisposalDto, actor: RequestUser) {
+    if (actor.role !== 'Owner') throw new ForbiddenException('Owner access required.');
+    return disposalProductOptions(this.prisma, query);
   }
 
   private async resolveBranchForActor(actor: RequestUser, branchId?: string) {

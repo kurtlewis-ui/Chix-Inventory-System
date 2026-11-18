@@ -2,17 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Plus, X, Loader2 } from 'lucide-react';
+import { Search, Plus, X, Loader2, Store, Clock3, CalendarDays, Filter } from 'lucide-react';
 import { useDisposals, useCreateDisposal, useBranches, useProducts } from '@/lib/hooks';
 import { useAuthStore } from '@/lib/store';
 import { getApiErrorMessage } from '@/lib/api';
-import { usePagination, Pagination } from '@/components/Pagination';
+import { Pagination } from '@/components/Pagination';
 import { Select } from '@/components/Select';
 import { DateTimeStack } from '@/components/DateTimeStack';
 import { ProductThumb } from '@/components/ProductThumb';
 import { NumberStepper } from '@/components/NumberStepper';
 import { useUnsavedGuard } from '@/lib/useUnsavedGuard';
-import { useStoredBranch } from '@/lib/useStoredBranch';
+import { msUntilNextBusinessDay, phQuickRangeDates, type QuickRange } from '@/lib/business-day';
+import { RecordProductSelect, type RecordProduct } from '@/components/RecordProductSelect';
 
 function peso(n: number) {
   return `\u20B1${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -24,7 +25,9 @@ function formatDate(iso: string) {
 export default function DisposalsPage() {
   // The Disposals page is removed for Admin — redirect them to their landing
   // page if they reach this route directly. (Owner keeps full access.)
-  const isAdmin = useAuthStore((s) => s.user?.role?.name === 'Admin');
+  const role = useAuthStore(s => s.user?.role?.name);
+  const isAdmin = role === 'Admin';
+  const isOwner = role === 'Owner';
   const router = useRouter();
   useEffect(() => {
     if (isAdmin) router.replace('/dashboard/sales/pending');
@@ -36,58 +39,108 @@ export default function DisposalsPage() {
   const [endDate, setEndDate] = useState('');
   const [showModal, setShowModal] = useState(false);
 
-  // Debounce search by 300ms so typing fires one request after the user stops,
-  // instead of one request per keystroke.
+  const [reason, setReason] = useState('');
+  const [debouncedReason, setDebouncedReason] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<RecordProduct | null>(null);
+  const [selectedShop, setSelectedShop] = useState('');
+  const [period, setPeriod] = useState<QuickRange | 'custom'>('all');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const resetPage = () => setPage(1);
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    if (search.trim() === debouncedSearch && reason.trim() === debouncedReason) return;
+    const timer = setTimeout(() => { setDebouncedSearch(search.trim()); setDebouncedReason(reason.trim()); setPage(1); }, 300);
     return () => clearTimeout(timer);
-  }, [search]);
-
+  }, [search, debouncedSearch, reason, debouncedReason]);
+  useEffect(() => {
+    if (period === 'all' || period === 'custom') return;
+    let timer: ReturnType<typeof setTimeout>;
+    const sync = () => {
+      clearTimeout(timer);
+      const dates = phQuickRangeDates(period);
+      setStartDate(dates.start); setEndDate(dates.end); setPage(1);
+      timer = setTimeout(sync, msUntilNextBusinessDay());
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') sync(); };
+    sync(); document.addEventListener('visibilitychange', onVisible);
+    return () => { clearTimeout(timer); document.removeEventListener('visibilitychange', onVisible); };
+  }, [period]);
   const { data: branchData } = useBranches();
   const branches = branchData?.data ?? [];
-  // Shared+persisted branch filter ('' = All Shops), remembered across the site.
-  const [selectedShop, setSelectedShop] = useStoredBranch(branches);
-
-  const { data, isLoading, isError, error } = useDisposals({
-    search: debouncedSearch, branchId: selectedShop || undefined, startDate: startDate || undefined, endDate: endDate || undefined,
-  });
-  // Show only approved disposals (the stock actually written off).
-  const disposals = (data?.data ?? []).filter((d) => d.status === 'APPROVED');
-  const summary = {
-    totalQuantity: disposals.reduce((s, d) => s + d.quantity, 0),
-    totalValue: disposals.reduce((s, d) => s + d.value, 0),
-    count: disposals.length,
-  };
-  const { pageItems: pagedDisposals, resetPage, controlProps } = usePagination(disposals, 10);
-
-  // Admin is redirected away (above) — render nothing while that happens.
-  if (isAdmin) return null;
+  const invalidDates = period === 'custom' && (!startDate || !endDate) ? 'Choose both From and To dates.'
+    : startDate && endDate && startDate > endDate ? 'From date must be on or before To date.' : '';
+  const waitingForSearch = search.trim() !== debouncedSearch || reason.trim() !== debouncedReason;
+  const { data, isLoading: queryLoading, isFetching, isError, error } = useDisposals({
+    status: 'APPROVED', page, limit, productKey: selectedProduct?.key,
+    search: debouncedSearch || undefined, reason: debouncedReason || undefined,
+    branchId: selectedShop || undefined, startDate: startDate || undefined, endDate: endDate || undefined,
+  }, isOwner && !invalidDates && !waitingForSearch);
+  const isLoading = queryLoading || !!invalidDates || waitingForSearch;
+  const disposals = data?.data ?? [];
+  const pagedDisposals = disposals;
+  const summary = data?.summary ?? { totalQuantity: 0, totalValue: 0, count: 0 };
+  const total = data?.pagination?.total ?? 0, totalPages = data?.pagination?.totalPages ?? 1;
+  useEffect(() => {
+    if (!isFetching && !isError && data?.pagination && page > totalPages) setPage(totalPages);
+  }, [data?.pagination, isFetching, isError, page, totalPages]);
+  const controlProps = { page, totalPages, total, startIdx: (page - 1) * limit, shown: disposals.length, disabled: isFetching || waitingForSearch,
+    onPrev: () => setPage(p => Math.max(1, p - 1)), onNext: () => setPage(p => Math.min(totalPages, p + 1)) };
+  function choosePeriod(value: string) {
+    const next = value as QuickRange;
+    setPeriod(next); const dates = phQuickRangeDates(next);
+    setStartDate(dates.start); setEndDate(dates.end); resetPage();
+  }
+  function clearFilters() {
+    setSelectedShop(''); setSelectedProduct(null); setSearch(''); setDebouncedSearch('');
+    setReason(''); setDebouncedReason(''); setPeriod('all'); setStartDate(''); setEndDate(''); resetPage();
+  }
+  if (!isOwner) return null;
 
   return (
-    <div className="p-6 bg-page-bg min-h-screen">
-      <div className="flex items-center justify-between mb-1">
-        <h1 className="text-2xl font-bold text-text-primary">Disposals</h1>
+    <div className="min-h-screen min-w-0 bg-page-bg p-4 sm:p-6">
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-text-primary">Disposal Records</h1>
+        <div className="flex flex-wrap gap-2"><button onClick={clearFilters} className="min-h-11 rounded-lg border border-input-border px-3 text-sm text-text-primary hover:opacity-80">Clear Filter</button>
         <button onClick={() => setShowModal(true)} className="flex items-center gap-2 btn-grad px-4 py-2 rounded-lg text-sm font-medium">
           <Plus size={16} /> Request Disposal
-        </button>
+        </button></div>
       </div>
       <p className="text-sm text-text-muted mb-6">Approved disposals (stock that has been written off). New requests go to <strong>Sales → Pending</strong> for approval.</p>
 
       <div className="bg-card-bg rounded-xl border border-card-border shadow-sm mb-4">
-        <div className="p-4 flex flex-wrap items-center gap-3">
-          <Select value={selectedShop} onChange={(v) => { setSelectedShop(v); resetPage(); }} ariaLabel="Shop" className="w-auto min-w-[150px]" options={[{ value: '', label: 'All Shops' }, ...branches.map((b) => ({ value: b.id, label: b.name }))]} />
-          <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); resetPage(); }} className="px-3 py-2 border border-input-border rounded-lg text-sm bg-input-bg focus:outline-none focus:ring-2 focus:ring-input-focus" />
-          <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); resetPage(); }} className="px-3 py-2 border border-input-border rounded-lg text-sm bg-input-bg focus:outline-none focus:ring-2 focus:ring-input-focus" />
+        <div className="grid grid-cols-1 items-end gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="min-w-0"><span className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-text-secondary"><Store size={14} aria-hidden="true" />SHOPS</span>
+            <Select value={selectedShop} onChange={v => { setSelectedShop(v); resetPage(); }} ariaLabel="Shop" options={[{ value: '', label: 'All Shops' }, ...branches.map(b => ({ value: b.id, label: b.name }))]} />
+          </div>
+          <div className="min-w-0"><span className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-text-secondary"><Clock3 size={14} aria-hidden="true" />PERIOD</span>
+            <Select value={period === 'custom' ? '' : period} placeholder="Manual dates" onChange={choosePeriod} ariaLabel="Period" options={[
+              { value: 'today', label: 'Daily — Today' }, { value: 'week', label: 'Weekly — This Week' },
+              { value: 'month', label: 'Monthly — This Month' }, { value: 'year', label: 'Yearly — This Year' },
+              { value: 'all', label: 'All Time' },
+            ]} />
+          </div>
+          <label className="min-w-0"><span className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-text-secondary"><CalendarDays size={14} aria-hidden="true" />FROM</span>
+            <input aria-label="From" type="date" value={startDate} onChange={e => { setPeriod('custom'); setStartDate(e.target.value); resetPage(); }} className="min-h-11 w-full min-w-0 rounded-lg border border-input-border bg-input-bg px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-input-focus" />
+          </label>
+          <label className="min-w-0"><span className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-text-secondary"><CalendarDays size={14} aria-hidden="true" />TO</span>
+            <input aria-label="To" type="date" value={endDate} onChange={e => { setPeriod('custom'); setEndDate(e.target.value); resetPage(); }} className="min-h-11 w-full min-w-0 rounded-lg border border-input-border bg-input-bg px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-input-focus" />
+          </label>
         </div>
+        {invalidDates && <p role="status" className="px-4 pb-4 text-sm text-accent-orange">{invalidDates}</p>}
       </div>
 
       <div className="bg-card-bg rounded-xl border border-card-border shadow-sm">
-        <div className="p-4 border-b border-card-border">
-          <div className="relative w-64">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-            <input type="text" placeholder="Search disposals..." value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="w-full pl-9 pr-4 py-2 border border-input-border rounded-lg bg-input-bg text-sm focus:outline-none focus:ring-2 focus:ring-input-focus" />
-          </div>
+        <div className="grid grid-cols-1 items-end gap-4 border-b border-card-border p-4 lg:grid-cols-3">
+          <div className="min-w-0"><span className="mb-2 block text-xs font-semibold tracking-wide text-text-secondary">SEARCH RECORDS</span><div className="relative"><Search size={16} aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" /><input type="search" aria-label="Search disposal records" placeholder="Search products, brands or reasons…" value={search} onChange={e => { setSelectedProduct(null); setSearch(e.target.value); }} className="min-h-11 w-full min-w-0 rounded-lg border border-input-border bg-input-bg pl-9 pr-3 text-sm text-text-primary" /></div></div>
+          <RecordProductSelect source="disposals" key={selectedShop + '/' + startDate + '/' + endDate + '/' + debouncedReason} selected={selectedProduct} disabled={!!invalidDates || waitingForSearch} scope={{ branchId: selectedShop || undefined, startDate: startDate || undefined, endDate: endDate || undefined, reason: debouncedReason || undefined }} onSelect={product => { setSelectedProduct(product); setSearch(''); setDebouncedSearch(''); resetPage(); }} />
+          <label className="min-w-0"><span className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-text-secondary"><Filter size={14} aria-hidden="true" />REASON</span><input type="search" aria-label="Reason filter" value={reason} onChange={e => setReason(e.target.value)} placeholder="Any reason — e.g. Damaged, Expired" className="min-h-11 w-full min-w-0 rounded-lg border border-input-border bg-input-bg px-3 text-sm text-text-primary" /></label>
         </div>
+        <div aria-label="Active disposal filters" className="flex flex-wrap items-center gap-2 border-b border-card-border px-4 py-3 text-xs text-text-secondary">
+          <span className="max-w-full break-words font-medium text-text-primary">{selectedProduct ? selectedProduct.name + ' (' + selectedProduct.brand + ')' : debouncedSearch ? 'Search: ' + debouncedSearch : 'All products'}</span>
+          <span>· {branches.find(b => b.id === selectedShop)?.name ?? 'All Shops'} · {startDate && endDate ? startDate + ' – ' + endDate : 'All Time'} · {debouncedReason ? 'Reason: ' + debouncedReason : 'All reasons'}</span>
+          {selectedProduct && <button type="button" onClick={() => { setSelectedProduct(null); resetPage(); }} className="rounded-md border border-input-border px-2 py-1 text-text-primary hover:bg-surface-muted">Clear Product</button>}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 border-b border-card-border px-4 py-3 text-sm text-text-secondary"><span>Rows</span><div className="w-24 shrink-0"><Select ariaLabel="Disposal records rows per page" value={String(limit)} onChange={value => { setLimit(Number(value)); resetPage(); }} options={[10, 25, 50, 100].map(value => ({ value: String(value), label: String(value) }))} /></div><span className="text-xs text-text-muted">records per page</span></div>
         <div className="overflow-x-auto">
           <table className="hidden w-full md:table">
             <thead>
@@ -98,7 +151,7 @@ export default function DisposalsPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Brand</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Shop</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Qty</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Value</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Value Lost</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Reason</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">By</th>
@@ -107,11 +160,11 @@ export default function DisposalsPage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={11} className="text-center py-8 text-text-muted"><Loader2 className="inline animate-spin mr-2" size={16} />Loading...</td></tr>
+                <tr><td colSpan={11} className="text-center py-8 text-text-muted"><Loader2 className="inline animate-spin mr-2" size={16} />{invalidDates ? 'Choose a valid date range above.' : 'Loading records…'}</td></tr>
               ) : isError ? (
                 <tr><td colSpan={11} className="text-center py-8 text-accent-red">{getApiErrorMessage(error)}</td></tr>
               ) : disposals.length === 0 ? (
-                <tr><td colSpan={11} className="px-4 py-12 text-center text-text-muted">No approved disposals yet.</td></tr>
+                <tr><td colSpan={11} className="px-4 py-12 text-center text-text-muted">No approved disposal records match these filters.</td></tr>
               ) : pagedDisposals.map((d, idx) => (
                 <tr key={d.id} className="border-b border-card-border transition">
                   <td className="px-4 py-3 text-sm text-text-primary">{controlProps.startIdx + idx + 1}</td>
@@ -138,7 +191,7 @@ export default function DisposalsPage() {
           {/* Mobile: disposal cards (hidden on desktop). */}
           <div className="md:hidden">
             {isLoading ? (
-              <div className="py-8 text-center text-text-muted"><Loader2 className="inline animate-spin mr-2" size={16} />Loading...</div>
+              <div className="py-8 text-center text-text-muted"><Loader2 className="inline animate-spin mr-2" size={16} />{invalidDates ? 'Choose a valid date range above.' : 'Loading records…'}</div>
             ) : isError ? (
               <div className="py-8 text-center text-accent-red">{getApiErrorMessage(error)}</div>
             ) : disposals.length === 0 ? (
@@ -147,7 +200,7 @@ export default function DisposalsPage() {
               <ul className="divide-y divide-card-border">
                 {pagedDisposals.map((d, idx) => (
                   <li key={d.id} className="p-4">
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex min-w-0 items-start gap-2.5">
                         <span className="text-[11px] text-text-muted pt-2">{controlProps.startIdx + idx + 1}.</span>
                         <ProductThumb src={d.image} alt={d.name} size="w-9 h-9" />
@@ -158,7 +211,7 @@ export default function DisposalsPage() {
                           <p className="text-[11px] text-text-muted">{d.createdBy} · {formatDate(d.addedAt ?? d.createdAt)}</p>
                         </div>
                       </div>
-                      <span className="shrink-0 badge badge-neutral">
+                      <span className="shrink-0 self-start badge badge-neutral">
                         <span className={`badge-dot ${d.status === 'APPROVED' ? 'bg-accent-green' : d.status === 'DECLINED' ? 'bg-accent-red' : 'bg-accent-orange'}`} />
                         {d.status.charAt(0) + d.status.slice(1).toLowerCase()}
                       </span>
@@ -174,10 +227,12 @@ export default function DisposalsPage() {
             <Pagination {...controlProps} noun="disposals" />
           </div>
         )}
-        <div className="p-4 border-t border-card-border">
-          <div className="border-l-4 border-accent-red pl-4 space-y-1">
-            <p className="text-sm text-text-primary"><span className="font-medium">Items disposed:</span> {summary.totalQuantity}</p>
-            <p className="text-sm text-text-primary font-bold">Total value written off: {peso(summary.totalValue)}</p>
+        <div className="border-t border-card-border p-4" hidden={isLoading || isError}>
+          <p className="mb-3 text-xs text-text-muted">Totals across all matching pages · Approved disposals only · Saved cost-based losses</p>
+          <div className="max-w-sm space-y-2.5 border-l-4 border-accent-orange pl-4 text-sm">
+            <div className="flex items-center justify-between gap-4"><span className="font-semibold text-text-primary">Total Quantity Disposed (units)</span><span className="font-bold tabular-nums text-text-primary">{summary.totalQuantity.toLocaleString()}</span></div>
+            <div className="flex items-center justify-between gap-4"><span className="text-text-secondary">Matching Disposal Records</span><span className="font-medium tabular-nums text-text-primary">{summary.count.toLocaleString()}</span></div>
+            <div className="flex items-center justify-between gap-4 border-t border-card-border pt-2.5"><span className="font-bold text-text-primary">Total Value Lost</span><span className="font-bold tabular-nums text-accent-orange">{peso(summary.totalValue)}</span></div>
           </div>
         </div>
       </div>

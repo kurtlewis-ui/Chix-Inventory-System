@@ -1,0 +1,11 @@
+# Owner Disposal Records
+
+Chix Owner Disposal Records opens on All Shops / All Time, independently of shared branch selections elsewhere. Controls follow SHOPS, PERIOD, FROM, TO with neutral icons. Daily, Weekly, Monthly, Yearly and All Time presets use the existing midnight-to-midnight Philippine business calendar. FROM/TO supports validated manual dates without a Custom Range menu option. Presets use a single cutoff timer and no polling interval.
+
+The page explicitly requests APPROVED disposals from the server, ten by default, with Rows: 10, 25, 50, 100. Server counts and deterministic createdAt/id ordering make every matching record reachable; the old first-200/client-pagination and page-only totals are removed. Each request stays bounded. Staff reports keep their existing pending-disposal defaults and self-ownership scoping; Admin still redirects to Pending without Owner record queries.
+
+Search matches product/brand/reason text. The separate Reason filter matches literal text within saved reasons, including notes such as Damaged — leaking. A historical Exact Product picker uses IDs to keep similarly named products separate and renames together, with saved product/brand identity for records whose catalog ID is gone. Identical deleted labels without remaining IDs share that fallback identity. Choices are paginated and scoped to approved history, shop, dates and reason; they load only while open. The endpoint is Owner-only and returns only identities/labels.
+
+Summary includes Total Quantity Disposed (units), Matching Disposal Records, and Total Value Lost across all matching pages. Value Lost sums each disposal's saved cost-based value, never current cost or selling value. Exact product, text, reason, shop and date restrictions are applied consistently to rows, count and totals. Clear Product keeps other filters; Clear Filter resets filters. Existing Request Disposal/approval/stock behavior is retained.
+
+No migration, live data changes or other-repository edits. Validation includes service/DTO/role tests, PostgreSQL historical-choice fixtures, sales regressions, 235 approved-record browser fixtures across 24 pages, exact/prefix/deleted identities, reason/date filters, all four row sizes, whole-filter saved losses, empty results, mobile/light/dark and Admin redirects.
