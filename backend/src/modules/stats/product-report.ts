@@ -25,7 +25,7 @@ export async function productReport(prisma: PrismaService, kind: ProductReportKi
     throw new BadRequestException('From date must be on or before To date.');
   }
   const { gte, lt } = businessDayRange(query.startDate, query.endDate);
-  const page = query.page ?? 1;
+  const page = query.limit === 0 ? 1 : query.page ?? 1;
   const limit = query.limit ?? 20;
   const conditions: Prisma.Sql[] = [Prisma.sql`status = 'APPROVED'`];
   if (query.branchId) conditions.push(Prisma.sql`branch_id = ${query.branchId}::uuid`);
@@ -68,7 +68,7 @@ export async function productReport(prisma: PrismaService, kind: ProductReportKi
     SELECT
       COALESCE((SELECT json_agg(json_build_object('key', key, 'name', name, 'brand', brand,
         'quantity', quantity, 'revenue', revenue, 'capital', capital) ORDER BY rank)
-        FROM ranked WHERE rank > ${(page - 1) * limit} AND rank <= ${page * limit}), '[]'::json) AS rows,
+        FROM ranked WHERE (${limit} = 0 OR (rank > ${(page - 1) * limit} AND rank <= ${page * limit}))), '[]'::json) AS rows,
       COALESCE((SELECT json_agg(json_build_object('key', key, 'name', name, 'brand', brand,
         'quantity', quantity, 'revenue', revenue, 'capital', capital) ORDER BY rank)
         FROM ranked WHERE rank <= 10), '[]'::json) AS top,
@@ -77,6 +77,6 @@ export async function productReport(prisma: PrismaService, kind: ProductReportKi
   `);
   const totals = result.totals;
   return { ...result, pagination: { page, limit, total: totals.products,
-    totalPages: Math.max(1, Math.ceil(totals.products / limit)),
-    hasNext: page * limit < totals.products, hasPrev: page > 1 } };
+    totalPages: limit === 0 ? 1 : Math.max(1, Math.ceil(totals.products / limit)),
+    hasNext: limit !== 0 && page * limit < totals.products, hasPrev: page > 1 } };
 }

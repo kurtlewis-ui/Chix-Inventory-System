@@ -10,8 +10,11 @@ describe('Owner product report boundaries', () => {
   it.each(['productSales', 'productDisposals'])('%s is restricted to Owner', method => {
     expect(Reflect.getMetadata(ROLES_KEY, (StatsController.prototype as any)[method])).toEqual(['Owner']);
   });
-  it.each([{ limit: 101 }, { page: 0 }, { branchId: 'not-uuid' }, { startDate: '2026-02-30' }, { endDate: 'yesterday' }])('rejects invalid filters: %j', async query => {
+  it.each([{ limit: -1 }, { limit: 101 }, { page: 0 }, { branchId: 'not-uuid' }, { startDate: '2026-02-30' }, { endDate: 'yesterday' }])('rejects invalid filters: %j', async query => {
     expect((await validate(plainToInstance(ProductReportQueryDto, query))).length).toBeGreaterThan(0);
+  });
+  it('accepts zero for all product rows', async () => {
+    expect(await validate(plainToInstance(ProductReportQueryDto, { limit: 0 }))).toEqual([]);
   });
   it('rejects reversed dates before making a database request', async () => {
     const prisma: any = { $queryRaw: jest.fn() };

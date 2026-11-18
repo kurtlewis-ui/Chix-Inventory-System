@@ -37,7 +37,8 @@ export class ProductReportQueryDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  @Min(1)
+  // Zero explicitly requests all matching product aggregates.
+  @Min(0)
   @Max(100)
   limit = 20;
 }
