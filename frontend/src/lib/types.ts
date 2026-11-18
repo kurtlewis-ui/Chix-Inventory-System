@@ -181,6 +181,7 @@ export interface Sale {
 }
 
 export interface SalesSummary {
+  quantity?: number; // Units in matching sale item rows across every page.
   grossSales: number; // Σ(unitPrice × qty) BEFORE discount; total = grossSales − discount
   cash: number;
   gcash: number;
