@@ -2,6 +2,8 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { SaleStatus, ExpenseStatus, DisposalStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RequestUser } from '../../common/interfaces/request-user.interface';
+import { productReport, ProductReportKind } from './product-report';
+import { ProductReportQueryDto } from './dto/product-report-query.dto';
 import {
   startOfBusinessDay,
   phBusinessClockSql,
@@ -13,6 +15,10 @@ import {
 @Injectable()
 export class StatsService {
   constructor(private prisma: PrismaService) {}
+
+  productReport(kind: ProductReportKind, query: ProductReportQueryDto) {
+    return productReport(this.prisma, kind, query);
+  }
   async dashboard() {
     const [
       shops,

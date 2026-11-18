@@ -77,9 +77,9 @@ export function SalesOverviewChart({ data, isDark, seriesName = 'Sales' }: { dat
   );
 }
 
-export function TopProductsDonut({ data, colors, isDark }: { data: { name: string; revenue: number }[]; colors: string[]; isDark: boolean }) {
+export function TopProductsDonut({ data, colors, isDark, valueKey = 'revenue' }: { data: { name: string; revenue: number; quantity?: number }[]; colors: string[]; isDark: boolean; valueKey?: 'revenue' | 'quantity' }) {
   return (
-    <ResponsiveContainer width={260} height={260}>
+    <ResponsiveContainer width="100%" height={260}>
       <PieChart>
         <Pie
           data={data}
@@ -87,7 +87,7 @@ export function TopProductsDonut({ data, colors, isDark }: { data: { name: strin
           cy="50%"
           innerRadius={70}
           outerRadius={110}
-          dataKey="revenue"
+          dataKey={valueKey}
           nameKey="name"
           strokeWidth={2}
           stroke={isDark ? '#0f0f0f' : '#ffffff'}
@@ -96,7 +96,7 @@ export function TopProductsDonut({ data, colors, isDark }: { data: { name: strin
             <Cell key={i} fill={colors[i % colors.length]} />
           ))}
         </Pie>
-        <Tooltip formatter={(val: any) => peso(Number(val))} contentStyle={tooltipStyle(isDark)} />
+        <Tooltip formatter={(val: any) => valueKey === 'quantity' ? `${Number(val).toLocaleString()} units` : peso(Number(val))} contentStyle={tooltipStyle(isDark)} />
       </PieChart>
     </ResponsiveContainer>
   );
