@@ -54,6 +54,18 @@ describePostgres('Product reports against PostgreSQL', () => {
     expect(next.rows.map(r => r.key)).not.toEqual(first.rows.map(r => r.key));
     expect(first.totals).toEqual({ products: 26, quantity: 274, revenue: 9950, capital: 3156 });
   });
+  it('returns all matching aggregates with stable totals when limit is zero', async () => {
+    const first = await report('sales');
+    const all = await report('sales', { limit: 0, page: 8 });
+    expect(all.rows).toHaveLength(26);
+    expect(all.totals).toEqual(first.totals);
+    expect(all.top).toEqual(first.top);
+    expect(all.pagination).toEqual({ page: 1, limit: 0, total: 26, totalPages: 1, hasNext: false, hasPrev: false });
+    expect((await report('sales', { limit: 0, search: 'Retired Product' })).rows).toHaveLength(1);
+    const empty = await report('sales', { limit: 0, search: 'missing product' });
+    expect(empty.rows).toEqual([]);
+    expect(empty.pagination.totalPages).toBe(1);
+  });
   it('scopes branch and literal product search before totals', async () => {
     const result = await report('sales', { productKey: productA, branchId: branchB });
     expect(result.totals).toEqual({ products: 1, quantity: 5, revenue: 1500, capital: 600 });
