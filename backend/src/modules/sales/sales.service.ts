@@ -126,7 +126,6 @@ export class SalesService {
   ) {
     const { page = 1, limit = 20, search, branchId, startDate, endDate } = query;
     const skip = (page - 1) * limit;
-    const allRecords = status === SaleStatus.APPROVED && query.all === true;
     const recordsSearch = status === SaleStatus.APPROVED ? search?.trim() : undefined;
     const exactProductKey = status === SaleStatus.APPROVED ? query.productKey : undefined;
     const exactItemWhere = exactRecordItemWhere(exactProductKey);
@@ -181,7 +180,8 @@ export class SalesService {
         where,
         include: { ...this.includeFull(), items: { ...this.includeFull().items, ...(recordsItemWhere ? { where: recordsItemWhere } : {}) } },
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-        ...(allRecords ? {} : { skip, take: limit }),
+        skip,
+        take: limit,
       }),
       // Aggregate the complete filtered set in PostgreSQL, not in Node.
       this.prisma.$queryRaw<Array<{
@@ -215,7 +215,7 @@ export class SalesService {
         const serialized = this.serialize(s);
         return recordsItemWhere ? { ...serialized, total: serialized.items.reduce((sum: number, item: { subTotal: number }) => sum + item.subTotal, 0) } : serialized;
       }),
-      pagination: allRecords ? this.paginate(1, total || 1, total) : this.paginate(page, limit, total),
+      pagination: this.paginate(page, limit, total),
       summary,
     };
   }

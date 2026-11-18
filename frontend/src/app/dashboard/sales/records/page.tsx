@@ -169,8 +169,8 @@ export default function SalesRecordsPage() {
 
         <div className="flex flex-wrap items-center gap-2 border-b border-card-border px-4 py-3 text-sm text-text-secondary">
           <span>Rows</span>
-          <div className="w-24 shrink-0"><Select ariaLabel="Sales records rows per page" value={String(limit)} onChange={value => { setLimit(Number(value)); resetPage(); }} options={[10, 25, 50, 100, 0].map(value => ({ value: String(value), label: value === 0 ? 'All' : String(value) }))} /></div>
-          <span className="text-xs text-text-muted">{limit === 0 ? 'All matching sales' : 'sales per page'}</span>
+          <div className="w-24 shrink-0"><Select ariaLabel="Sales records rows per page" value={String(limit)} onChange={value => { setLimit(Number(value)); resetPage(); }} options={[10, 25, 50, 100].map(value => ({ value: String(value), label: String(value) }))} /></div>
+          <span className="text-xs text-text-muted">sales per page</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -323,7 +323,7 @@ export default function SalesRecordsPage() {
               <span className="font-bold tabular-nums text-text-primary">{(summary.quantity ?? 0).toLocaleString()}</span>
             </div>
             <div className="flex items-center justify-between gap-4 text-sm">
-              <span className="text-text-secondary">Matching Sales</span>
+              <span className="text-text-secondary">Matching Transactions</span>
               <span className="font-medium tabular-nums text-text-primary">{summary.count.toLocaleString()}</span>
             </div>
             <div className="flex items-center justify-between gap-4 text-sm">

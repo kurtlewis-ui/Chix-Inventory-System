@@ -10,7 +10,7 @@ No migration or live data changes. Validation uses service pagination/role tests
 
 ## Exact product and quantity totals
 
-Records adds Total Quantity Sold (units) and Matching Sales to its all-pages summary. Quantity is summed from approved matching item rows in PostgreSQL; matching-sales count counts each qualifying sale once. With no product filter both cover all matching products; text search covers literal matching product/brand names. Exact-product selection uses the saved product ID, so similarly named products remain separate while historical renames of one ID stay together.
+Records adds Total Quantity Sold (units) and Matching Transactions to its all-pages summary. Quantity is summed from approved matching item rows in PostgreSQL; matching-sales count counts each qualifying sale once. With no product filter both cover all matching products; text search covers literal matching product/brand names. Exact-product selection uses the saved product ID, so similarly named products remain separate while historical renames of one ID stay together.
 
 A searchable, paginated Exact Product picker reads approved historical items under the selected shop/date scope, including archived or removed catalog entries. Deleted rows without a catalog ID use their saved product/brand labels as a fallback identity. As those rows no longer retain their original product IDs, identical deleted labels share that historical identity. The choices endpoint returns only identity/name/brand, fetches twenty options per page while open, caches briefly, and adds no background polling.
 
@@ -21,6 +21,7 @@ Validation includes mixed-product sales, exact ID vs similarly named sibling, hi
 
 ## Row selection
 
-Rows: 10, 25, 50, 100 and All appears above the table. The default is ten sales; items belonging to one sale stay together. Changing row size resets to page one. All explicitly requests all approved matching sales, preserving exact product/search/shop/date scope and totals, with one-page metadata. Pending Sales keeps its bounded pagination. No background polling or automatic all-history preload is introduced.
+Rows: 10, 25, 50 and 100 appears above the table, defaulting to ten sales. All has been removed: the page no longer makes unbounded history requests. Each sale stays grouped with its items. Changing row size resets to page one, while every matching transaction remains reachable through pagination. Quantity and monetary totals still cover every matching page. API/export consumers retain their existing bounded pagination.
+
 
 The Records period menu no longer includes Custom Range. FROM and TO remain directly editable; manual edits display Manual dates and stop preset rollover. Daily, Weekly, Monthly, Yearly and All Time remain available.

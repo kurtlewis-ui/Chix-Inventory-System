@@ -77,28 +77,28 @@ describe('SalesService', () => {
   });
 
   describe('database summaries', () => {
-    it('returns every matching record for explicit All while preserving exact product and branch filters', async () => {
+    it('keeps 100-sale pages bounded with exact product, staff scope and complete totals', async () => {
       const productKey = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
       prisma.user.findUnique.mockResolvedValue({ branchId: BRANCH_ID });
       prisma.sale.count.mockResolvedValue(235);
       prisma.sale.findMany.mockResolvedValue([]);
       prisma.$queryRaw.mockResolvedValue([{ quantity: 705 }]);
-      const result = await service.findRecords({ all: true, page: 9, limit: 200, productKey, branchId: 'other-branch' }, STAFF);
+      const result = await service.findRecords({ page: 3, limit: 100, productKey, branchId: 'other-branch' }, STAFF);
       const args = prisma.sale.findMany.mock.calls[0][0];
-      expect(args.take).toBeUndefined();
-      expect(args.skip).toBeUndefined();
+      expect(args.take).toBe(100);
+      expect(args.skip).toBe(200);
       expect(args.where).toMatchObject({ branchId: BRANCH_ID, items: { some: { productId: productKey } } });
-      expect(result.pagination).toMatchObject({ page: 1, total: 235, totalPages: 1, hasNext: false, hasPrev: false });
+      expect(result.pagination).toMatchObject({ page: 3, total: 235, totalPages: 3, hasNext: false, hasPrev: true });
       expect(result.summary).toMatchObject({ quantity: 705, count: 235 });
     });
 
-    it('keeps Pending paginated when All is requested, and handles empty All records', async () => {
+    it('keeps Pending paginated and handles empty Records', async () => {
       prisma.sale.count.mockResolvedValue(0);
       prisma.sale.findMany.mockResolvedValue([]);
       prisma.$queryRaw.mockResolvedValue([]);
-      await service.findPending({ all: true, limit: 25, page: 2 }, OWNER);
+      await service.findPending({ limit: 25, page: 2 }, OWNER);
       expect(prisma.sale.findMany.mock.calls[0][0]).toMatchObject({ skip: 25, take: 25 });
-      const empty = await service.findRecords({ all: true }, OWNER);
+      const empty = await service.findRecords({}, OWNER);
       expect(empty.pagination).toMatchObject({ page: 1, total: 0, totalPages: 1, hasNext: false, hasPrev: false });
     });
     it('returns whole-filter totals independently of the visible page', async () => {
