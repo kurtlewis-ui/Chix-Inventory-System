@@ -763,8 +763,7 @@ export function useSalesRecords(params?: {
       getList<Sale>('/sales/records', {
         productKey: params?.productKey || undefined,
         page: params?.page ?? 1,
-        limit: params?.limit === 0 ? 200 : params?.limit ?? 10,
-        all: params?.limit === 0 ? true : undefined,
+        limit: params?.limit ?? 10,
         search: params?.search || undefined,
         branchId: params?.branchId || undefined,
         startDate: params?.startDate || undefined,
