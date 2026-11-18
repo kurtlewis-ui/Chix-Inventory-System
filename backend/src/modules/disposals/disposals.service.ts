@@ -347,6 +347,7 @@ export class DisposalsService {
   async findAll(query: QueryDisposalDto, actor: RequestUser, status?: DisposalStatus) {
     const { page = 1, limit = 50, search, branchId, startDate, endDate } = query;
     const skip = (page - 1) * limit;
+    const omitTotals = actor.role === 'Owner' && status === DisposalStatus.APPROVED && query.totals === 'omit';
     if (startDate && endDate && startDate > endDate) throw new BadRequestException('From date must be on or before To date.');
 
     const where: Prisma.DisposalWhereInput = {};
@@ -377,7 +378,7 @@ export class DisposalsService {
     if (query.reason?.trim()) where.reason = { contains: query.reason.trim().replace(/[\\%_]/g, '\\$&'), mode: 'insensitive' };
 
     const [total, disposals, agg] = await Promise.all([
-      this.prisma.disposal.count({ where }),
+      omitTotals ? Promise.resolve(0) : this.prisma.disposal.count({ where }),
       this.prisma.disposal.findMany({
         where,
         include: this.includeFull(),
@@ -385,7 +386,7 @@ export class DisposalsService {
         skip,
         take: limit,
       }),
-      this.prisma.disposal.aggregate({ where, _sum: { value: true, quantity: true } }),
+      omitTotals ? Promise.resolve({ _sum: { value: null, quantity: null } }) : this.prisma.disposal.aggregate({ where, _sum: { value: true, quantity: true } }),
     ]);
 
     return {

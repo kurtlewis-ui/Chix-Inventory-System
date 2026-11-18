@@ -5,6 +5,7 @@ import { useState, type ReactNode } from 'react';
 import { Heartbeat } from '@/components/Heartbeat';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/Toast';
+import { shouldRetryQuery } from '@/lib/request-policy';
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -13,7 +14,7 @@ export function Providers({ children }: { children: ReactNode }) {
         defaultOptions: {
           queries: {
             refetchOnWindowFocus: false,
-            retry: 1,
+            retry: shouldRetryQuery,
             // 45s: cached data stays fresh across page navigations instead of
             // refetching every 5s. Live pages set their own refetchInterval, and
             // all mutations invalidate explicitly, so reads stay correct.

@@ -77,6 +77,27 @@ describe('SalesService', () => {
   });
 
   describe('database summaries', () => {
+    it('reads only page rows when Records totals can be reused by the caller', async () => {
+      prisma.sale.findMany.mockResolvedValue([]);
+      await service.findRecords({ page: 2, limit: 100, totals: 'omit', branchId: BRANCH_ID }, OWNER);
+      expect(prisma.sale.count).not.toHaveBeenCalled();
+      expect(prisma.$queryRaw).not.toHaveBeenCalled();
+      const args = prisma.sale.findMany.mock.calls[0][0];
+      expect(args).toMatchObject({ skip: 100, take: 100, where: { branchId: BRANCH_ID, status: 'APPROVED' } });
+      expect(args.include.items.select.costPrice).toBeUndefined();
+      expect(args.include.items.select.note).toBe(true);
+      expect(args.include.items.select.product.select.image).toBe(true);
+    });
+
+    it('still returns full totals for Pending and normal API/export callers', async () => {
+      prisma.sale.count.mockResolvedValue(0);
+      prisma.sale.findMany.mockResolvedValue([]);
+      prisma.$queryRaw.mockResolvedValue([]);
+      await service.findPending({ totals: 'omit' }, OWNER);
+      await service.findRecords({ limit: 200 }, OWNER);
+      expect(prisma.sale.count).toHaveBeenCalledTimes(2);
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
+    });
     it('keeps 100-sale pages bounded with exact product, staff scope and complete totals', async () => {
       const productKey = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
       prisma.user.findUnique.mockResolvedValue({ branchId: BRANCH_ID });

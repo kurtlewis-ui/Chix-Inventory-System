@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { isUUID } from 'class-validator';
 import { PrismaService } from '../../prisma/prisma.service';
 import { businessDayRange } from '../../common/utils/business-day.util';
 import { ProductReportQueryDto } from './dto/product-report-query.dto';
@@ -31,13 +32,17 @@ export async function productReport(prisma: PrismaService, kind: ProductReportKi
   if (query.branchId) conditions.push(Prisma.sql`branch_id = ${query.branchId}::uuid`);
   if (gte) conditions.push(Prisma.sql`created_at >= ${gte}`);
   if (lt) conditions.push(Prisma.sql`created_at < ${lt}`);
+  // Restrict an exact identity before grouping the full history.
+  if (query.productKey) conditions.push(isUUID(query.productKey)
+    ? Prisma.sql`product_id = ${query.productKey}::uuid`
+    : Prisma.sql`COALESCE(product_id::text, 'snapshot:' || json_build_array(name, brand_name)::text) = ${query.productKey}`);
 
   // Source identifiers are fixed code, never request input. All values below
   // are bound parameters. Capital uses each historical line's cost snapshot.
   const source = kind === 'sales'
     ? Prisma.sql`SELECT i.id, i.product_id, i.name, i.brand_name, i.quantity,
         i.sub_total AS revenue, i.cost_price * i.quantity AS capital,
-        s.created_at, s.branch_id, s.status::text AS status
+        s.created_at, s.branch_id, s.status AS status
         FROM sale_items i JOIN sales s ON s.id = i.sale_id`
     : Prisma.sql`SELECT id, product_id, product_name AS name, brand_name, quantity,
         0::numeric AS revenue, value AS capital, created_at, branch_id, status::text AS status

@@ -22,12 +22,12 @@ export async function disposalProductOptions(prisma: PrismaService, query: Query
   if (query.reason?.trim()) clauses.push(Prisma.sql`strpos(lower(COALESCE(d.reason, '')), lower(${query.reason.trim()})) > 0`);
   const search = query.search?.trim() ?? '', page = query.page ?? 1, limit = query.limit ?? 20;
   const [result] = await prisma.$queryRaw<Array<{ rows: Array<{ key: string; name: string; brand: string }>; total: number }>>(Prisma.sql`
-    WITH grouped AS (
+    WITH lines AS (
       SELECT COALESCE(d.product_id::text, 'snapshot:' || json_build_array(d.product_name, d.brand_name)::text) AS key,
-        (array_agg(d.product_name ORDER BY d.created_at DESC, d.id DESC))[1] AS name,
-        (array_agg(d.brand_name ORDER BY d.created_at DESC, d.id DESC))[1] AS brand
+        d.product_name AS name, d.brand_name AS brand, d.created_at, d.id
       FROM disposals d WHERE ${Prisma.join(clauses, ' AND ')}
-      GROUP BY COALESCE(d.product_id::text, 'snapshot:' || json_build_array(d.product_name, d.brand_name)::text)
+    ), grouped AS (
+      SELECT DISTINCT ON (key) key, name, brand FROM lines ORDER BY key, created_at DESC, id DESC
     ), matched AS (
       SELECT * FROM grouped WHERE ${search} = '' OR strpos(lower(name), lower(${search})) > 0 OR strpos(lower(brand), lower(${search})) > 0
     ), ranked AS (

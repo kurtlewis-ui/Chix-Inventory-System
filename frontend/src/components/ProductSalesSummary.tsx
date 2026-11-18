@@ -58,7 +58,7 @@ export function ProductSalesSummary({ kind }: { kind: 'sales' | 'disposals' }) {
   const params = { branchId: branchId || undefined, startDate: dates.start || undefined,
     endDate: dates.end || undefined, search: debouncedSearch || undefined, productKey: selected?.key, page, limit };
   const report = useQuery({ queryKey: ['stats', `product-${kind}`, params],
-    queryFn: async () => (await api.get<{ data: Report }>(`/stats/product-${kind}`, { params })).data.data,
+    queryFn: async ({ signal }) => (await api.get<{ data: Report }>(`/stats/product-${kind}`, { params, signal })).data.data,
     enabled: !invalidDates, placeholderData: previous => previous, staleTime: 30_000 });
   const data = report.data;
   const chooseProduct = (row: Row) => { setSelected({ key: row.key, name: row.name }); setPage(1); };

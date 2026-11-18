@@ -117,6 +117,7 @@ export class SalesController {
   @ApiOperation({ summary: 'List approved sales (records)' })
   async records(@Query() query: QuerySaleDto, @CurrentUser() user: RequestUser) {
     const result = await this.salesService.findRecords(query, user);
+    if (query.totals === 'omit') return { success: true, data: result.data };
     return {
       success: true,
       data: result.data,

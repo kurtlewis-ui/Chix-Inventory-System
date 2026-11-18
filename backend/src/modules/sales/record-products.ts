@@ -27,12 +27,12 @@ export async function recordProductOptions(prisma: PrismaService, query: QuerySa
   const page = query.page ?? 1, limit = query.limit ?? 20, search = query.search?.trim() ?? '';
   const predicate = saleAggregatePredicate({ status: 'APPROVED', branchId, dateRange: businessDayRange(query.startDate, query.endDate) });
   const [result] = await prisma.$queryRaw<Array<{ rows: Array<{ key: string; name: string; brand: string }>; total: number }>>(Prisma.sql`
-    WITH grouped AS (
+    WITH lines AS (
       SELECT COALESCE(i.product_id::text, 'snapshot:' || json_build_array(i.name, i.brand_name)::text) AS key,
-        (array_agg(i.name ORDER BY s.created_at DESC, i.id DESC))[1] AS name,
-        (array_agg(i.brand_name ORDER BY s.created_at DESC, i.id DESC))[1] AS brand
+        i.name, i.brand_name AS brand, s.created_at, i.id
       FROM sale_items i JOIN sales s ON s.id = i.sale_id WHERE ${predicate}
-      GROUP BY COALESCE(i.product_id::text, 'snapshot:' || json_build_array(i.name, i.brand_name)::text)
+    ), grouped AS (
+      SELECT DISTINCT ON (key) key, name, brand FROM lines ORDER BY key, created_at DESC, id DESC
     ), matched AS (
       SELECT * FROM grouped WHERE ${search} = '' OR strpos(lower(name), lower(${search})) > 0 OR strpos(lower(brand), lower(${search})) > 0
     ), ranked AS (

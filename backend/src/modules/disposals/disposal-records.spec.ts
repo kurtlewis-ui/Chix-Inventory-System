@@ -16,6 +16,15 @@ describe('Owner disposal records', () => {
     prisma = { disposal: { count: jest.fn().mockResolvedValue(235), findMany: jest.fn().mockResolvedValue([]), aggregate: jest.fn().mockResolvedValue({ _sum: { value: 70500, quantity: 705 } }) }, $queryRaw: jest.fn().mockResolvedValue([{ rows: [], total: 0 }]) };
     service = new DisposalsService(prisma);
   });
+  it('skips full-history count/aggregate only for Owner approved page-only reads', async () => {
+    await service.findAll({ page: 2, limit: 100, productKey, totals: 'omit' }, owner, 'APPROVED');
+    expect(prisma.disposal.count).not.toHaveBeenCalled();
+    expect(prisma.disposal.aggregate).not.toHaveBeenCalled();
+    expect(prisma.disposal.findMany.mock.calls[0][0]).toMatchObject({ skip: 100, take: 100, where: { status: 'APPROVED', productId: productKey } });
+    await service.findAll({ totals: 'omit' }, { ...owner, role: 'Staff' }, 'PENDING');
+    expect(prisma.disposal.count).toHaveBeenCalledTimes(1);
+    expect(prisma.disposal.aggregate).toHaveBeenCalledTimes(1);
+  });
   it('paginates beyond 200 and returns whole-filter saved cost totals', async () => {
     prisma.disposal.findMany.mockResolvedValue([{ id: 'disposal', branchId, quantity: 3, unitPrice: 100, value: 300, productName: 'V2', brandName: 'Brand', product: { sellingPrice: 999 }, status: 'APPROVED' }]);
     const result = await service.findAll({ page: 24, limit: 10, productKey, branchId, reason: 'Damaged', startDate: '2026-11-18', endDate: '2026-11-18' }, owner, 'APPROVED');

@@ -126,6 +126,7 @@ export class SalesService {
   ) {
     const { page = 1, limit = 20, search, branchId, startDate, endDate } = query;
     const skip = (page - 1) * limit;
+    const omitTotals = status === SaleStatus.APPROVED && query.totals === 'omit';
     const recordsSearch = status === SaleStatus.APPROVED ? search?.trim() : undefined;
     const exactProductKey = status === SaleStatus.APPROVED ? query.productKey : undefined;
     const exactItemWhere = exactRecordItemWhere(exactProductKey);
@@ -175,7 +176,7 @@ export class SalesService {
     if (recordsItemWhere) where.items = { some: recordsItemWhere };
 
     const [total, sales, summaryItems] = await Promise.all([
-      this.prisma.sale.count({ where }),
+      omitTotals ? Promise.resolve(0) : this.prisma.sale.count({ where }),
       this.prisma.sale.findMany({
         where,
         include: { ...this.includeFull(), items: { ...this.includeFull().items, ...(recordsItemWhere ? { where: recordsItemWhere } : {}) } },
@@ -184,7 +185,7 @@ export class SalesService {
         take: limit,
       }),
       // Aggregate the complete filtered set in PostgreSQL, not in Node.
-      this.prisma.$queryRaw<Array<{
+      omitTotals ? Promise.resolve([]) : this.prisma.$queryRaw<Array<{
         grossSales: Prisma.Decimal; discount: Prisma.Decimal;
         cash: Prisma.Decimal; gcash: Prisma.Decimal; bankTransfer: Prisma.Decimal;
         quantity: Prisma.Decimal;
@@ -753,7 +754,12 @@ export class SalesService {
       staff: { select: { id: true, firstName: true, lastName: true, email: true } },
       // Include each item's current product image (via productId) so item
       // tables can show a small thumbnail. Null when the product was deleted.
-      items: { include: { product: { select: { image: true } } } },
+      items: { select: {
+        id: true, productId: true, name: true, brandName: true, quantity: true,
+        unitPrice: true, discount: true, subTotal: true, paymentMethod: true,
+        bankNote: true, note: true, paymentSplit: true, addedAt: true,
+        product: { select: { image: true } },
+      } },
     } satisfies Prisma.SaleInclude;
   }
 
