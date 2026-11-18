@@ -31,8 +31,8 @@ export function ProductSalesSummary({ kind }: { kind: 'sales' | 'disposals' }) {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selected, setSelected] = useState<{ key: string; name: string } | null>(null);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(sales ? 10 : 20);
-  const [expanded, setExpanded] = useState(!sales);
+  const [limit, setLimit] = useState(10);
+  const [expanded, setExpanded] = useState(false);
   const tableId = useId();
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
@@ -120,14 +120,14 @@ export function ProductSalesSummary({ kind }: { kind: 'sales' | 'disposals' }) {
         </div>
         <p className="mb-4 text-xs text-text-muted">Totals cover every matching product and page. {sales && 'Revenue is after discounts. Capital uses each sale’s saved unit cost × quantity.'}</p>
         {data.top.length > 0 && <>
-          {sales && <button type="button" aria-expanded={expanded} aria-controls={tableId} onClick={() => setExpanded(v => !v)} className="flex min-h-11 w-full items-center gap-2 rounded-lg border border-card-border bg-surface-muted px-3 py-2 text-left text-sm font-semibold text-text-primary hover:opacity-80">
+          <button type="button" aria-expanded={expanded} aria-controls={tableId} onClick={() => setExpanded(v => !v)} className="flex min-h-11 w-full items-center gap-2 rounded-lg border border-card-border bg-surface-muted px-3 py-2 text-left text-sm font-semibold text-text-primary hover:opacity-80">
             {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             {expanded ? 'Show Less' : 'Show All Products (' + data.totals.products.toLocaleString() + ')'}
-          </button>}
+          </button>
           {expanded && <div id={tableId} className="mt-4">
           <h3 className="mb-2 text-sm font-semibold text-text-primary">All Matching Products</h3>
           <p className="mb-3 text-xs text-text-muted">Click a product name to show only that product. Products without approved {sales ? 'sales' : 'disposals'} in this period are excluded.</p>
-          <div className="mb-3 flex items-center gap-2 text-xs text-text-secondary"><span>Rows</span><div className="w-24 shrink-0"><Select ariaLabel={title + ' rows per page'} value={String(limit)} onChange={v => { setLimit(Number(v)); setPage(1); }} className="w-24" options={(sales ? [10, 50, 100, 0] : [20, 50, 100]).map(n => ({ value: String(n), label: n === 0 ? 'All' : String(n) }))} /></div></div>
+          <div className="mb-3 flex items-center gap-2 text-xs text-text-secondary"><span>Rows</span><div className="w-24 shrink-0"><Select ariaLabel={title + ' rows per page'} value={String(limit)} onChange={v => { setLimit(Number(v)); setPage(1); }} className="w-24" options={[10, 50, 100, 0].map(n => ({ value: String(n), label: n === 0 ? 'All' : String(n) }))} /></div></div>
           <p className="mb-2 text-xs text-text-muted sm:hidden">Swipe the table to see all columns.</p>
           <div className="overflow-x-auto rounded-lg border border-card-border">
             <table className="w-full min-w-[660px] text-left text-sm" aria-label={`${title} table`}>
