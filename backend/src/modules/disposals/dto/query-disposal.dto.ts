@@ -8,6 +8,7 @@ import {
   IsString,
   IsUUID,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 import { DisposalStatus } from '@prisma/client';
@@ -32,6 +33,16 @@ export class QueryDisposalDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  productKey?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  reason?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

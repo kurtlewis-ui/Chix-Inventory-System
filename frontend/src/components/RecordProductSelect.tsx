@@ -9,14 +9,15 @@ import type { Pagination } from '@/lib/types';
 export type RecordProduct = { key: string; name: string; brand: string };
 
 type Props = {
+  source?: 'sales' | 'disposals';
   selected: RecordProduct | null;
   onSelect: (product: RecordProduct) => void;
-  scope: { branchId?: string; startDate?: string; endDate?: string };
+  scope: { branchId?: string; startDate?: string; endDate?: string; reason?: string };
   disabled?: boolean;
 };
 
 /** Remote, paginated historical choices; fetched only while the picker is open. */
-export function RecordProductSelect({ selected, onSelect, scope, disabled }: Props) {
+export function RecordProductSelect({ selected, onSelect, scope, disabled, source = 'sales' }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
@@ -38,8 +39,8 @@ export function RecordProductSelect({ selected, onSelect, scope, disabled }: Pro
     return () => document.removeEventListener('pointerdown', outside);
   }, [open]);
   const result = useQuery({
-    queryKey: ['sales', 'record-products', scope, query, page],
-    queryFn: async ({ signal }) => (await api.get<{ data: RecordProduct[]; pagination: Pagination }>('/sales/record-products', {
+    queryKey: [source, 'record-products', scope, query, page],
+    queryFn: async ({ signal }) => (await api.get<{ data: RecordProduct[]; pagination: Pagination }>(`/${source}/record-products`, {
       params: { ...scope, search: query || undefined, page, limit: 20 }, signal,
     })).data,
     enabled: open && !disabled, staleTime: 30_000,
@@ -64,7 +65,7 @@ export function RecordProductSelect({ selected, onSelect, scope, disabled }: Pro
       <div className="mt-2 max-h-64 overflow-y-auto" id={listId} role="listbox" aria-label="Historical products">
         {result.isLoading || search.trim() !== query ? <p role="status" className="p-3 text-sm text-text-muted"><Loader2 size={14} className="mr-2 inline animate-spin" />Loading products…</p>
           : result.isError ? <div role="alert" className="p-3 text-sm text-accent-red">{getApiErrorMessage(result.error)} <button type="button" className="underline" onClick={() => result.refetch()}>Retry</button></div>
-          : !result.data?.data.length ? <p role="status" className="p-3 text-sm text-text-muted">No products with approved sales in these filters.</p>
+          : !result.data?.data.length ? <p role="status" className="p-3 text-sm text-text-muted">No products with approved {source} in these filters.</p>
           : result.data.data.map(product => <button key={product.key} type="button" role="option" aria-selected={selected?.key === product.key} onClick={() => { onSelect(product); close(); }} className="flex min-h-11 w-full items-start justify-between gap-2 rounded-md px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-muted focus:bg-surface-muted focus:outline-none">
             <span className="min-w-0"><span className="block break-words font-medium">{product.name}</span><span className="block break-words text-xs text-text-muted">{product.brand} · {product.key.startsWith('snapshot:') ? 'Historical record' : `ID ${product.key.slice(-8)}`}</span></span>
             {selected?.key === product.key && <Check size={16} aria-hidden="true" className="shrink-0" />}

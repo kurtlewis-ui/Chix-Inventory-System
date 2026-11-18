@@ -63,6 +63,14 @@ export class DisposalsController {
     };
   }
 
+  @Get('record-products')
+  @Roles('Owner')
+  @ApiOperation({ summary: 'Search approved disposal product history for Owner records' })
+  async recordProducts(@Query() query: QueryDisposalDto, @CurrentUser() user: RequestUser) {
+    const result = await this.disposalsService.findRecordProducts(query, user);
+    return { success: true, data: result.data, pagination: result.pagination };
+  }
+
   @Post(':id/approve')
   @Roles('Owner', 'Admin')
   @ApiOperation({ summary: 'Approve a pending disposal (deducts stock)' })

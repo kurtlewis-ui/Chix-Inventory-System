@@ -1089,13 +1089,18 @@ export function useSalesSummary(params?: { branchId?: string; startDate?: string
 // ===========================================================================
 // DISPOSALS
 // ===========================================================================
-export function useDisposals(params?: { search?: string; branchId?: string; startDate?: string; endDate?: string; status?: string }) {
+export function useDisposals(params?: { search?: string; branchId?: string; startDate?: string; endDate?: string; status?: string; page?: number; limit?: number; productKey?: string; reason?: string }, enabled = true) {
   return useQuery({
     queryKey: ['disposals', params ?? {}],
-    queryFn: async () => {
+    enabled,
+    queryFn: async ({ signal }) => {
       const res = await api.get('/disposals', {
+        signal,
         params: {
-          limit: 200,
+          page: params?.page ?? 1,
+          limit: params?.limit ?? 200,
+          productKey: params?.productKey || undefined,
+          reason: params?.reason || undefined,
           search: params?.search || undefined,
           branchId: params?.branchId || undefined,
           startDate: params?.startDate || undefined,
@@ -1105,6 +1110,7 @@ export function useDisposals(params?: { search?: string; branchId?: string; star
       });
       return {
         data: (res.data.data ?? []) as Disposal[],
+        pagination: res.data.pagination as Pagination | undefined,
         summary: (res.data.summary ?? { totalValue: 0, totalQuantity: 0, count: 0 }) as DisposalSummary,
       };
     },
