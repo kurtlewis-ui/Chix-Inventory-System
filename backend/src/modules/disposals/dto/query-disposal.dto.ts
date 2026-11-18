@@ -4,6 +4,7 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -43,6 +44,10 @@ export class QueryDisposalDto {
   @IsString()
   @MaxLength(300)
   reason?: string;
+
+  @IsOptional()
+  @IsIn(['omit'])
+  totals?: 'omit';
 
   @ApiProperty({ required: false })
   @IsOptional()

@@ -43,6 +43,7 @@ export class DisposalsController {
     const statusFilter =
       status && (DisposalStatus as any)[status] ? (status as DisposalStatus) : undefined;
     const result = await this.disposalsService.findAll(query, user, statusFilter);
+    if (query.totals === 'omit' && statusFilter === DisposalStatus.APPROVED && user.role === 'Owner') return { success: true, data: result.data };
     return {
       success: true,
       data: result.data,

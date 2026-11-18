@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from './store';
+import { shouldRetryRead, waitForRetry } from './request-policy';
 
 // Logs out the auth session. Draft is preserved so staff don't lose
 // their work if their token expires.
@@ -87,16 +88,16 @@ api.interceptors.response.use(
   async (error) => {
     const status = error?.response?.status;
     const config = error?.config;
-    const isNetwork = !error.response; // no response = network / CORS / cold start
-    const isGateway = status === 502 || status === 503 || status === 504;
+    if (axios.isCancel(error) || error?.code === 'ERR_CANCELED' || config?.signal?.aborted) return Promise.reject(error);
 
-    if (config && !config.__skipRetry && (isNetwork || isGateway)) {
+    if (config && !config.__skipRetry && shouldRetryRead(config.method, status, !!error.response)) {
       config.__retryCount = (config.__retryCount || 0) + 1;
       if (config.__retryCount <= 4) {
         const delay = Math.min(5000, 2000 * config.__retryCount);
-        await new Promise((res) => setTimeout(res, delay));
+        await waitForRetry(delay, config.signal);
         return api(config);
       }
+      error.__readRetriesExhausted = true;
     }
 
     const isAuthEndpoint = typeof config?.url === 'string' && config.url.includes('/auth/');
@@ -104,9 +105,11 @@ api.interceptors.response.use(
       config.__isRetryAfterRefresh = true;
       try {
         const accessToken = await refreshAccessToken();
+        if (config.signal?.aborted) throw new axios.CanceledError('Request canceled');
         config.headers.Authorization = `Bearer ${accessToken}`;
         return api(config);
-      } catch {
+      } catch (refreshError) {
+        if (axios.isCancel(refreshError) || config.signal?.aborted) return Promise.reject(refreshError);
         logoutSession();
         return Promise.reject(error);
       }

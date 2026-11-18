@@ -7,6 +7,8 @@ import {
   type QueryKey,
 } from '@tanstack/react-query';
 import { api, getApiErrorMessage } from './api';
+import { useAuthStore } from './store';
+import { loadReportPage, reportPageStaleTime } from './report-pages';
 import { useToast } from '@/components/Toast';
 import type { DraftItem, DraftDisposalItem, DraftExpense } from './draft';
 import type {
@@ -756,11 +758,15 @@ export function useSalesRecords(params?: {
   startDate?: string;
   endDate?: string;
 }, enabled = true) {
+  const client = useQueryClient();
+  const identity = useAuthStore(s => [s.user?.id, s.user?.role?.name, s.user?.branch?.id].join(':'));
+  const { page: ignoredPage, limit: ignoredLimit, ...filters } = params ?? {};
   return useQuery({
-    queryKey: ['sales', 'records', params ?? {}],
+    queryKey: ['sales', 'records', identity, params ?? {}],
     enabled,
+    staleTime: reportPageStaleTime,
     queryFn: ({ signal }) =>
-      getList<Sale>('/sales/records', {
+      loadReportPage<Sale, SalesSummary>(client, '/sales/records', {
         productKey: params?.productKey || undefined,
         page: params?.page ?? 1,
         limit: params?.limit ?? 10,
@@ -768,7 +774,7 @@ export function useSalesRecords(params?: {
         branchId: params?.branchId || undefined,
         startDate: params?.startDate || undefined,
         endDate: params?.endDate || undefined,
-      }, signal),
+      }, ['sales', 'records-totals', identity, filters], signal),
   });
 }
 
@@ -1090,10 +1096,18 @@ export function useSalesSummary(params?: { branchId?: string; startDate?: string
 // DISPOSALS
 // ===========================================================================
 export function useDisposals(params?: { search?: string; branchId?: string; startDate?: string; endDate?: string; status?: string; page?: number; limit?: number; productKey?: string; reason?: string }, enabled = true) {
+  const client = useQueryClient();
+  const role = useAuthStore(s => s.user?.role?.name);
+  const identity = useAuthStore(s => [s.user?.id, s.user?.role?.name, s.user?.branch?.id].join(':'));
+  const { page: ignoredPage, limit: ignoredLimit, ...filters } = params ?? {};
   return useQuery({
-    queryKey: ['disposals', params ?? {}],
+    queryKey: ['disposals', identity, params ?? {}],
     enabled,
+    staleTime: reportPageStaleTime,
     queryFn: async ({ signal }) => {
+      if (role === 'Owner' && params?.status === 'APPROVED') {
+        return loadReportPage<Disposal, DisposalSummary>(client, '/disposals', { ...params, page: params.page ?? 1, limit: params.limit ?? 10 }, ['disposals', 'records-totals', identity, filters], signal);
+      }
       const res = await api.get('/disposals', {
         signal,
         params: {

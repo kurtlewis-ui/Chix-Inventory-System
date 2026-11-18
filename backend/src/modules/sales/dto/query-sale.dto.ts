@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsInt,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -37,6 +38,10 @@ export class QuerySaleDto {
   @IsString()
   @MaxLength(1000)
   productKey?: string;
+
+  @IsOptional()
+  @IsIn(['omit'])
+  totals?: 'omit';
 
   @ApiProperty({ required: false, description: 'Filter by branch ID' })
   @IsOptional()
