@@ -1,15 +1,15 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
-import { Search, Loader2 } from 'lucide-react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Search, Loader2, Store, Clock3, CalendarDays } from 'lucide-react';
 import { useSalesRecords, useBranches } from '@/lib/hooks';
 import { filterSalesByProduct } from '@/lib/sale-search';
 import { getApiErrorMessage } from '@/lib/api';
-import { usePagination, Pagination } from '@/components/Pagination';
+import { Pagination } from '@/components/Pagination';
 import { Select } from '@/components/Select';
 import { DateTimeStack } from '@/components/DateTimeStack';
 import { ProductThumb } from '@/components/ProductThumb';
-import { useStoredBranch } from '@/lib/useStoredBranch';
+import { msUntilNextBusinessDay, phQuickRangeDates, type QuickRange } from '@/lib/business-day';
 import type { PaymentMethod, PaymentSplit } from '@/lib/types';
 
 function peso(n: number) {
@@ -50,26 +50,65 @@ export default function SalesRecordsPage() {
 
   const { data: branchData } = useBranches();
   const branches = branchData?.data ?? [];
-  // Shared+persisted branch filter ('' = All Shops), remembered across the site.
-  const [selectedShop, setSelectedShop] = useStoredBranch(branches);
-
-  // Search is applied CLIENT-SIDE so it filters to the matching ITEM rows
-  // (by product name or brand), not whole sales — matching the Pending Sales
-  // behavior. So we don't pass `search` to the backend here.
-  const { data, isLoading, isError, error } = useSalesRecords({
+  // Records always opens on All Shops, independent of filters elsewhere.
+  const [selectedShop, setSelectedShop] = useState('');
+  const [period, setPeriod] = useState<QuickRange | 'custom'>('all');
+  const [page, setPage] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const limit = 10;
+  const resetPage = () => setPage(1);
+  useEffect(() => {
+    if (search.trim() === debouncedSearch) return;
+    const timer = setTimeout(() => { setDebouncedSearch(search.trim()); setPage(1); }, 300);
+    return () => clearTimeout(timer);
+  }, [search, debouncedSearch]);
+  useEffect(() => {
+    if (period === 'custom' || period === 'all') return;
+    let timer: ReturnType<typeof setTimeout>;
+    const sync = () => {
+      clearTimeout(timer);
+      const dates = phQuickRangeDates(period);
+      setStartDate(dates.start); setEndDate(dates.end); setPage(1);
+      timer = setTimeout(sync, msUntilNextBusinessDay());
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') sync(); };
+    sync();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearTimeout(timer); document.removeEventListener('visibilitychange', onVisible); };
+  }, [period]);
+  const invalidDates = period === 'custom' && (!startDate || !endDate)
+    ? 'Choose both From and To dates.'
+    : startDate && endDate && startDate > endDate ? 'From date must be on or before To date.' : '';
+  const { data, isLoading: queryLoading, isFetching, isError, error } = useSalesRecords({
     branchId: selectedShop || undefined,
     startDate: startDate || undefined,
     endDate: endDate || undefined,
-  });
-
-  const sales = useMemo(() => filterSalesByProduct(data?.data ?? [], search), [data?.data, search]);
+    search: debouncedSearch || undefined,
+    page, limit,
+  }, !invalidDates);
+  const isLoading = queryLoading || !!invalidDates;
+  const sales = useMemo(() => filterSalesByProduct(data?.data ?? [], debouncedSearch), [data?.data, debouncedSearch]);
+  const pagedSales = sales;
   const summary = data?.summary ?? { grossSales: 0, cash: 0, gcash: 0, bankTransfer: 0, discount: 0, total: 0, count: 0 };
-  // Paginate by SALE (10 per page) — each sale renders several item rows.
-  // Pagination runs on the already-filtered list so pages reflect the search.
-  const { pageItems: pagedSales, resetPage, controlProps } = usePagination(sales, 10);
+  const total = data?.pagination?.total ?? 0;
+  const totalPages = data?.pagination?.totalPages ?? 1;
+  useEffect(() => {
+    if (!isFetching && !isError && data?.pagination && page > totalPages) setPage(totalPages);
+  }, [data?.pagination, isFetching, isError, page, totalPages]);
+  const controlProps = { page, totalPages, total, startIdx: (page - 1) * limit, shown: sales.length,
+    disabled: isFetching || search.trim() !== debouncedSearch,
+    onPrev: () => setPage(p => Math.max(1, p - 1)), onNext: () => setPage(p => Math.min(totalPages, p + 1)) };
+  function choosePeriod(value: string) {
+    const next = value as QuickRange | 'custom';
+    setPeriod(next);
+    const dates = next === 'custom' ? { start: '', end: '' } : phQuickRangeDates(next);
+    setStartDate(dates.start); setEndDate(dates.end); resetPage();
+  }
 
   const clearFilters = () => {
     setSelectedShop('');
+    setPeriod('all');
+    setDebouncedSearch('');
     setStartDate('');
     setEndDate('');
     setSearch('');
@@ -77,8 +116,8 @@ export default function SalesRecordsPage() {
   };
 
   return (
-    <div className="p-6 bg-page-bg min-h-screen">
-      <div className="flex items-center justify-between mb-6">
+    <div className="min-h-screen min-w-0 bg-page-bg p-4 sm:p-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-text-primary">Sales Records</h1>
         <button onClick={clearFilters} className="px-4 py-2 border border-input-border rounded-lg text-sm text-text-primary hover:opacity-80 transition">
           Clear Filter
@@ -87,19 +126,33 @@ export default function SalesRecordsPage() {
 
       {/* Filters */}
       <div className="bg-card-bg rounded-xl border border-card-border shadow-sm mb-4">
-        <div className="p-4 flex flex-wrap items-center gap-3">
-          <Select value={selectedShop} onChange={(v) => { setSelectedShop(v); resetPage(); }} ariaLabel="Shop" className="w-auto min-w-[150px]" options={[{ value: '', label: 'All Shops' }, ...branches.map((b) => ({ value: b.id, label: b.name }))]} />
-          <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); resetPage(); }} className="px-3 py-2 border border-input-border rounded-lg text-sm bg-input-bg focus:outline-none focus:ring-2 focus:ring-input-focus" />
-          <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); resetPage(); }} className="px-3 py-2 border border-input-border rounded-lg text-sm bg-input-bg focus:outline-none focus:ring-2 focus:ring-input-focus" />
+        <div className="grid grid-cols-1 items-end gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="min-w-0"><span className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-text-secondary"><Store size={14} aria-hidden="true" />SHOPS</span>
+            <Select value={selectedShop} onChange={v => { setSelectedShop(v); resetPage(); }} ariaLabel="Shop" options={[{ value: '', label: 'All Shops' }, ...branches.map(b => ({ value: b.id, label: b.name }))]} />
+          </div>
+          <div className="min-w-0"><span className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-text-secondary"><Clock3 size={14} aria-hidden="true" />PERIOD</span>
+            <Select value={period} onChange={choosePeriod} ariaLabel="Period" options={[
+              { value: 'today', label: 'Daily — Today' }, { value: 'week', label: 'Weekly — This Week' },
+              { value: 'month', label: 'Monthly — This Month' }, { value: 'year', label: 'Yearly — This Year' },
+              { value: 'all', label: 'All Time' }, { value: 'custom', label: 'Custom Range' },
+            ]} />
+          </div>
+          <label className="min-w-0"><span className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-text-secondary"><CalendarDays size={14} aria-hidden="true" />FROM</span>
+            <input aria-label="From" type="date" value={startDate} onChange={e => { setPeriod('custom'); setStartDate(e.target.value); resetPage(); }} className="min-h-11 w-full min-w-0 rounded-lg border border-input-border bg-input-bg px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-input-focus" />
+          </label>
+          <label className="min-w-0"><span className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-text-secondary"><CalendarDays size={14} aria-hidden="true" />TO</span>
+            <input aria-label="To" type="date" value={endDate} onChange={e => { setPeriod('custom'); setEndDate(e.target.value); resetPage(); }} className="min-h-11 w-full min-w-0 rounded-lg border border-input-border bg-input-bg px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-input-focus" />
+          </label>
         </div>
+        {invalidDates && <p role="status" className="px-4 pb-4 text-sm text-accent-orange">{invalidDates}</p>}
       </div>
 
       {/* Table */}
       <div className="bg-card-bg rounded-xl border border-card-border shadow-sm">
         <div className="p-4 border-b border-card-border">
-          <div className="relative w-64">
+          <div className="relative w-full sm:max-w-xs">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-            <input type="text" placeholder="Search records..." value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} className="w-full pl-9 pr-4 py-2 border border-input-border rounded-lg bg-input-bg text-sm focus:outline-none focus:ring-2 focus:ring-input-focus" />
+            <input aria-label="Search records" type="search" placeholder="Search products or brands..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-4 py-2 border border-input-border rounded-lg bg-input-bg text-sm focus:outline-none focus:ring-2 focus:ring-input-focus" />
           </div>
         </div>
 
@@ -122,7 +175,7 @@ export default function SalesRecordsPage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={11} className="text-center py-8 text-text-muted"><Loader2 className="inline animate-spin mr-2" size={16} />Loading records...</td></tr>
+                <tr><td colSpan={11} className="text-center py-8 text-text-muted"><Loader2 className="inline animate-spin mr-2" size={16} />{invalidDates ? 'Choose a valid date range above.' : 'Loading records...'}</td></tr>
               ) : isError ? (
                 <tr><td colSpan={11} className="text-center py-8 text-accent-red">{getApiErrorMessage(error)}</td></tr>
               ) : sales.length === 0 ? (
@@ -184,7 +237,7 @@ export default function SalesRecordsPage() {
               grouped by sale so nothing runs off the screen edge. */}
           <div className="md:hidden">
             {isLoading ? (
-              <div className="py-8 text-center text-text-muted"><Loader2 className="inline animate-spin mr-2" size={16} />Loading records...</div>
+              <div className="py-8 text-center text-text-muted"><Loader2 className="inline animate-spin mr-2" size={16} />{invalidDates ? 'Choose a valid date range above.' : 'Loading records...'}</div>
             ) : isError ? (
               <div className="py-8 text-center text-accent-red">{getApiErrorMessage(error)}</div>
             ) : sales.length === 0 ? (
@@ -243,7 +296,7 @@ export default function SalesRecordsPage() {
         )}
 
         {/* Summary */}
-        <div className="p-4 border-t border-card-border">
+        <div className="p-4 border-t border-card-border" hidden={isLoading || isError}>
           {/* Label left, amount right (tabular-nums) so every peso lines up.
               Gross − Discount = Net Sales, then Net split by payment method. */}
           <div className="border-l-4 border-accent-blue pl-4 max-w-xs space-y-2.5">
